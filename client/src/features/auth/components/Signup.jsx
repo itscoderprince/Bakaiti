@@ -2,10 +2,9 @@ import { Link } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { FaUser, FaLock, FaImage, FaVenusMars } from "react-icons/fa";
 import { MdAlternateEmail } from "react-icons/md";
-import { useForm, Controller } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { signupSchema } from "../../schemas/auth.schema.js";
-import PasswordInput from "../../components/PasswordInput";
+import { Controller } from "react-hook-form";
+import PasswordInput from "../../../components/PasswordInput";
+import { useSignup } from "../hooks/useSignup.js";
 import {
   Card,
   CardHeader,
@@ -25,26 +24,12 @@ import {
 } from "@/components/ui/select";
 
 const Signup = () => {
+  const { form, onSubmit, isLoading } = useSignup();
   const {
     register,
     control,
-    handleSubmit,
-    reset,
-    formState: { errors, isSubmitting },
-  } = useForm({
-    resolver: zodResolver(signupSchema),
-  });
-
-  const onSubmit = async (data) => {
-    // For the file upload, the form data gives a FileList. We grab the first file.
-    const file =
-      data.profilePic && data.profilePic.length > 0 ? data.profilePic[0] : null;
-    console.log({ ...data, profilePic: file });
-
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-    reset();
-  };
+    formState: { errors },
+  } = form;
 
   return (
     <div className="flex min-h-svh flex-col items-center justify-center gap-6 bg-muted p-6 md:p-10">
@@ -57,7 +42,7 @@ const Signup = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit(onSubmit)}>
+            <form onSubmit={onSubmit}>
               <div className="grid gap-4">
                 <div className="grid gap-2">
                   <Label htmlFor="fullname" className="flex items-center gap-2">
@@ -206,8 +191,12 @@ const Signup = () => {
                   )}
                 </div>
 
-                <Button type="submit" className="w-full" disabled={isSubmitting}>
-                  {isSubmitting ? (
+                <Button
+                  type="submit"
+                  className="w-full"
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Creating account...

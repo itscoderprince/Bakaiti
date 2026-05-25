@@ -1,5 +1,4 @@
 import asyncHandler from "../utils/asyncHandler.js";
-import AppError from "../utils/AppError.js";
 import ApiResponse from "../utils/ApiResponse.js";
 import Conversation from "../models/conversation.model.js";
 import Message from "../models/message.model.js";
@@ -7,6 +6,7 @@ import Message from "../models/message.model.js";
 export const sendMessage = asyncHandler(async (req, res, next) => {
   const senderId = req.user._id;
   const receiverId = req.params.reciverId;
+
   const { message } = req.body;
 
   let conversation = await Conversation.findOne({
@@ -40,12 +40,17 @@ export const sendMessage = asyncHandler(async (req, res, next) => {
 });
 
 export const getMessages = asyncHandler(async (req, res, next) => {
-  const senderId = req.user._id;
+  const myId = req.user._id;
   const userToChatId = req.params.userId;
 
   const conversation = await Conversation.findOne({
-    participants: { $all: [senderId, userToChatId] },
-  }).populate("messages"); // Populate actual messages
+    participants: { $all: [myId, userToChatId] },
+  })
+    .select("-__v -updatedAt")
+    .populate({
+      path: "messages",
+      select: "message senderId createdAt",
+    });
 
   if (!conversation) {
     return res.status(200).json(new ApiResponse(200, [], "No messages yet"));
@@ -54,6 +59,6 @@ export const getMessages = asyncHandler(async (req, res, next) => {
   res
     .status(200)
     .json(
-      new ApiResponse(200, conversation.messages, "Messages retrieved successfully"),
+      new ApiResponse(200, conversation, "Messages retrieved successfully"),
     );
 });

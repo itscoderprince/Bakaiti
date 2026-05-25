@@ -4,6 +4,7 @@ import ApiResponse from "../utils/ApiResponse.js";
 import User from "../models/user.model.js";
 import { generateTokenAndSetCookie } from "../utils/generateToken.js";
 
+// Register
 export const register = asyncHandler(async (req, res, next) => {
   const { fullname, username, email, password, gender } = req.body;
 
@@ -43,14 +44,19 @@ export const register = asyncHandler(async (req, res, next) => {
     );
 });
 
+// Login
 export const login = asyncHandler(async (req, res, next) => {
   const { username, password } = req.body;
 
   // Find user by username
   const user = await User.findOne({ username });
 
+  if (!user) {
+    return res.status(404).json(new ApiResponse(404, null, "New user found"));
+  }
+
   // Use the isPasswordCorrect method we added to the schema
-  if (!user || !(await user.isPasswordCorrect(password))) {
+  if (!(await user.isPasswordCorrect(password))) {
     return next(new AppError(401, "Invalid username or password"));
   }
 
@@ -71,6 +77,7 @@ export const login = asyncHandler(async (req, res, next) => {
     );
 });
 
+// GetProfile
 export const getProfile = asyncHandler(async (req, res, next) => {
   // The user is already fetched and attached to req by the isAuthenticated middleware
   res
@@ -80,6 +87,7 @@ export const getProfile = asyncHandler(async (req, res, next) => {
     );
 });
 
+// Logout
 export const logout = asyncHandler(async (req, res, next) => {
   res.cookie("jwt", "", {
     httpOnly: true,
@@ -89,4 +97,20 @@ export const logout = asyncHandler(async (req, res, next) => {
   res
     .status(200)
     .json(new ApiResponse(200, null, "User logged out successfully!"));
+});
+
+// GetOtherUsers
+export const getOtherUsers = asyncHandler(async (req, res, next) => {
+  const loggedInUserId = req.user._id;
+
+  // Find all users except the currently logged-in user
+  const otherUsers = await User.find({ _id: { $ne: loggedInUserId } }).select(
+    "-password",
+  );
+
+  res
+    .status(200)
+    .json(
+      new ApiResponse(200, otherUsers, "Other users retrieved successfully"),
+    );
 });

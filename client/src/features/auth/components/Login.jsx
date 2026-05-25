@@ -1,10 +1,8 @@
 import { Link } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { FaUser, FaLock } from "react-icons/fa";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { loginSchema } from "../../schemas/auth.schema.js";
-import PasswordInput from "../../components/PasswordInput";
+import PasswordInput from "../../../components/PasswordInput";
+import { useLogin } from "../hooks/useLogin.js";
 import {
   Card,
   CardHeader,
@@ -17,21 +15,11 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 
 const Login = () => {
+  const { form, onSubmit, isLoading } = useLogin();
   const {
     register,
-    handleSubmit,
-    reset,
-    formState: { errors, isSubmitting },
-  } = useForm({
-    resolver: zodResolver(loginSchema),
-  });
-
-  const onSubmit = async (data) => {
-    console.log("Login Data:", data);
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-    reset();
-  };
+    formState: { errors },
+  } = form;
 
   return (
     <div className="flex min-h-svh flex-col items-center justify-center gap-6 bg-muted p-6 md:p-10">
@@ -42,7 +30,7 @@ const Login = () => {
             <CardDescription>Login to continue chatting</CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit(onSubmit)}>
+            <form onSubmit={onSubmit}>
               <div className="grid gap-6">
                 <div className="grid gap-2">
                   <Label htmlFor="username" className="flex items-center gap-2">
@@ -85,8 +73,8 @@ const Login = () => {
                   )}
                 </div>
 
-                <Button type="submit" className="w-full" disabled={isSubmitting}>
-                  {isSubmitting ? (
+                <Button type="submit" className="w-full" disabled={isLoading}>
+                  {isLoading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Logging in...

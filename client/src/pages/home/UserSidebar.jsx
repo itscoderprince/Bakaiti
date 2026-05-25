@@ -1,4 +1,6 @@
 import { useNavigate } from "react-router-dom";
+import { useDispatch } from "react-redux";
+import { logoutUserThunk } from "../../features/auth/store/auth.thunks.js";
 import {
   Sidebar,
   SidebarContent,
@@ -42,9 +44,15 @@ const UserSidebar = ({
   toggleTheme,
 }) => {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
 
-  const handleLogout = () => {
-    navigate("/login");
+  const handleLogout = async () => {
+    try {
+      await dispatch(logoutUserThunk()).unwrap();
+      navigate("/login");
+    } catch (error) {
+      console.error("Logout failed:", error);
+    }
   };
 
   return (

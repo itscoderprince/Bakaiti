@@ -40,6 +40,12 @@ export const errorHandler = (err, req, res, next) => {
     error = { statusCode: 401, message };
   }
 
+  // Connection Refused Error
+  if (err.code === "ECONNREFUSED") {
+    const message = "Service is temporarily unavailable. Connection refused.";
+    error = { statusCode: 503, message };
+  }
+
   const statusCode = error.statusCode || 500;
   const message = error.message || "Internal Server Error";
 
