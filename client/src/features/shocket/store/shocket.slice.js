@@ -1,8 +1,9 @@
 import { createSlice } from "@reduxjs/toolkit";
 import { io } from "socket.io-client";
 
-const BASE_URL =
-  import.meta.env.MODE === "development" ? "http://localhost:3500" : "/";
+const BASE_URL = import.meta.env.VITE_API_URL
+  ? import.meta.env.VITE_API_URL.replace("/api/v1", "").replace(/\/$/, "")
+  : "http://localhost:3500";
 
 // Store socket instance outside Redux state to prevent Immer proxying/freezing issues.
 let socketInstance = null;
