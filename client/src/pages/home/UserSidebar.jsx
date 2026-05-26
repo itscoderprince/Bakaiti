@@ -1,6 +1,8 @@
 import { useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
+import { useState } from "react";
 import { logoutUserThunk } from "../../features/auth/store/auth.thunks.js";
+import ChangePasswordSheet from "../../features/auth/components/ChangePasswordSheet.jsx";
 import {
   Sidebar,
   SidebarContent,
@@ -44,6 +46,7 @@ const UserSidebar = ({
 }) => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const { otherUsers, user: currentUser } = useSelector((store) => store.auth);
   const { onlineUsers } = useSelector((store) => store.shocket);
   const { lastMessageTimes } = useSelector((store) => store.messages);
@@ -74,12 +77,13 @@ const UserSidebar = ({
   };
 
   return (
-    <Sidebar
-      className={`border-r border-sidebar-border bg-sidebar transition-all duration-200 w-full! md:w-88! ${
-        activeContactId ? "hidden md:flex" : "flex"
-      }`}
-      collapsible="none"
-    >
+    <>
+      <Sidebar
+        className={`border-r border-sidebar-border bg-sidebar transition-all duration-200 w-full! md:w-88! ${
+          activeContactId ? "hidden md:flex" : "flex"
+        }`}
+        collapsible="none"
+      >
       {/* Sidebar Header */}
       <SidebarHeader className="p-3 md:p-4">
         <div className="flex items-center justify-between">
@@ -98,13 +102,13 @@ const UserSidebar = ({
         </div>
 
         {/* Search Form */}
-        <div className="relative mt-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground opacity-70" />
+        <div className="relative mt-1 group">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground opacity-70 transition-colors group-focus-within:text-emerald-500" />
           <SidebarInput
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search contacts..."
-            className="pl-9 bg-background/50 focus-visible:ring-1 border-input h-9"
+            className="pl-9 bg-background/50 border-input h-9 rounded-xl focus-visible:ring-2 focus-visible:ring-emerald-500/20 focus-visible:border-emerald-500 transition-all duration-200"
           />
         </div>
       </SidebarHeader>
@@ -138,14 +142,14 @@ const UserSidebar = ({
                     : user.username?.substring(0, 2).toUpperCase() || "U";
 
                   return (
-                    <SidebarMenuItem key={user._id} className="mb-0.5">
+                    <SidebarMenuItem key={user._id} className="mb-1 px-1">
                       <SidebarMenuButton
                         onClick={() => setActiveContactId(user._id)}
                         isActive={isActive}
-                        className={`w-full flex items-center justify-between p-3 h-14 rounded-lg transition-all duration-200 border border-transparent ${
+                        className={`w-full flex items-center justify-between p-3 h-14 rounded-xl transition-all duration-250 border ${
                           isActive
-                            ? "bg-sidebar-accent text-sidebar-accent-foreground border-sidebar-border/50 shadow-sm"
-                            : "hover:bg-sidebar-accent/50 text-foreground/80 hover:text-foreground"
+                            ? "bg-sidebar-accent text-sidebar-accent-foreground border-sidebar-border/50 shadow-md translate-x-1"
+                            : "hover:bg-sidebar-accent/40 border-transparent hover:border-sidebar-border/20 text-foreground/80 hover:text-foreground hover:translate-x-0.5"
                         }`}
                       >
                         <div className="flex items-center gap-3 w-full min-w-0">
@@ -155,27 +159,27 @@ const UserSidebar = ({
                               <img
                                 src={user.profilePic}
                                 alt={user.fullname}
-                                className="flex h-9 w-9 object-cover items-center justify-center rounded-full shadow-sm"
+                                className="flex h-9 w-9 object-cover items-center justify-center rounded-full shadow-md border border-border/10"
                               />
                             ) : (
-                              <div className="flex h-9 w-9 items-center justify-center rounded-full text-white text-sm font-semibold shadow-sm bg-indigo-500">
+                              <div className="flex h-9 w-9 items-center justify-center rounded-full text-white text-xs font-bold shadow-md bg-gradient-to-tr from-emerald-500 to-teal-600">
                                 {initials}
                               </div>
                             )}
                             {/* Online presence status indicator */}
                             {onlineUsers?.includes(user._id) && (
-                              <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-sidebar bg-emerald-500 shadow-sm" />
+                              <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-sidebar shadow-[0_0_8px_rgba(16,185,129,0.5)] animate-pulse" />
                             )}
                           </div>
 
                           {/* Contact Text Information */}
                           <div className="flex flex-col text-left min-w-0 w-full">
                             <div className="flex items-center justify-between">
-                              <span className="font-medium text-sm truncate">
+                              <span className="font-semibold text-sm truncate tracking-tight">
                                 {user.fullname}
                               </span>
                             </div>
-                            <span className="text-xs text-muted-foreground truncate mt-0.5">
+                            <span className="text-[11px] text-muted-foreground/80 truncate mt-0.5">
                               @{user.username}
                             </span>
                           </div>
@@ -191,14 +195,14 @@ const UserSidebar = ({
       </SidebarContent>
 
       {/* Sidebar Footer */}
-      <SidebarFooter className="p-1 bg-sidebar-accent/20">
+      <SidebarFooter className="p-2 border-t border-sidebar-border bg-sidebar-accent/10">
         <SidebarMenu>
           <SidebarMenuItem>
             <DropdownMenu>
               <DropdownMenuTrigger
-                className="w-full flex items-center justify-between p-2 rounded-lg hover:bg-sidebar-accent transition-all duration-200"
+                className="w-full flex items-center justify-between p-2.5 rounded-xl border border-transparent hover:border-sidebar-border/30 hover:bg-sidebar-accent/50 transition-all duration-200 shadow-sm"
                 render={
-                  <button className="flex items-center justify-between w-full" />
+                  <button className="flex items-center justify-between w-full cursor-pointer" />
                 }
               >
                 <div className="flex items-center gap-2.5 min-w-0">
@@ -210,7 +214,7 @@ const UserSidebar = ({
                         className="flex h-8 w-8 object-cover items-center justify-center rounded-full shadow-sm"
                       />
                     ) : (
-                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-800 text-white text-xs font-semibold">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-tr from-zinc-700 to-zinc-900 text-white text-[10px] font-bold">
                         {currentUser?.fullname
                           ? currentUser.fullname
                               .trim()
@@ -247,7 +251,10 @@ const UserSidebar = ({
                     <CircleUser className="h-4 w-4" />
                     Profile Details
                   </DropdownMenuItem>
-                  <DropdownMenuItem className="cursor-pointer gap-2">
+                  <DropdownMenuItem
+                    onClick={() => setIsSettingsOpen(true)}
+                    className="cursor-pointer gap-2"
+                  >
                     <Settings2 className="h-4 w-4" />
                     Settings
                   </DropdownMenuItem>
@@ -281,7 +288,9 @@ const UserSidebar = ({
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>
-    </Sidebar>
+      </Sidebar>
+      <ChangePasswordSheet open={isSettingsOpen} onOpenChange={setIsSettingsOpen} />
+    </>
   );
 };
 

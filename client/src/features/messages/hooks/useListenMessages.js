@@ -1,6 +1,11 @@
 import { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { appendMessage, updateLastMessageTime } from "../store/message.slice.js";
+import {
+  appendMessage,
+  updateLastMessageTime,
+  markMessagesAsRead,
+  markMessagesAsDelivered,
+} from "../store/message.slice.js";
 import { getSocket } from "../../shocket/store/shocket.slice.js";
 import toast from "react-hot-toast";
 
@@ -40,10 +45,26 @@ export const useListenMessages = (activeContactId) => {
       }
     };
 
+    const handleMessagesRead = ({ readerId }) => {
+      if (readerId === activeContactId) {
+        dispatch(markMessagesAsRead({ readerId }));
+      }
+    };
+
+    const handleMessagesDelivered = ({ receiverId }) => {
+      if (receiverId === activeContactId) {
+        dispatch(markMessagesAsDelivered({ receiverId }));
+      }
+    };
+
     socket.on("newMessage", handleNewMessage);
+    socket.on("messagesRead", handleMessagesRead);
+    socket.on("messagesDelivered", handleMessagesDelivered);
 
     return () => {
       socket.off("newMessage", handleNewMessage);
+      socket.off("messagesRead", handleMessagesRead);
+      socket.off("messagesDelivered", handleMessagesDelivered);
     };
   }, [isConnected, dispatch, activeContactId, otherUsers]);
 };

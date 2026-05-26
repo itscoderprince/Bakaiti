@@ -16,9 +16,17 @@ const messageSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    status: {
+      type: String,
+      enum: ["sent", "delivered", "read"],
+      default: "sent",
+    },
   },
   { timestamps: true },
 );
+
+messageSchema.index({ senderId: 1, receiverId: 1 });
+messageSchema.index({ receiverId: 1, status: 1 });
 
 const Message = mongoose.model("Message", messageSchema);
 export default Message;

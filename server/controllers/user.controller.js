@@ -4,6 +4,8 @@ import ApiResponse from "../utils/ApiResponse.js";
 import User from "../models/user.model.js";
 import { generateTokenAndSetCookie } from "../utils/generateToken.js";
 import { config } from "../config/env.js";
+import crypto from "crypto";
+import { sendEmail } from "../utils/sendEmail.js";
 
 // Register
 export const register = asyncHandler(async (req, res, next) => {
@@ -105,13 +107,134 @@ export const getOtherUsers = asyncHandler(async (req, res, next) => {
   console.log(loggedInUserId);
 
   // Find all users except the currently logged-in user
-  const otherUsers = await User.find({ _id: { $ne: loggedInUserId } }).select(
-    "-password",
-  );
+  const otherUsers = await User.find({ _id: { $ne: loggedInUserId } })
+    .select("-password")
+    .lean();
 
   res
     .status(200)
     .json(
       new ApiResponse(200, otherUsers, "Other users retrieved successfully"),
     );
+});
+
+// Forgot Password
+export const forgotPassword = asyncHandler(async (req, res, next) => {
+  const { email } = req.body;
+
+  const user = await User.findOne({ email });
+  if (!user) {
+    return next(new AppError(404, "User not found with this email"));
+  }
+
+  // Generate random reset token
+  const resetToken = crypto.randomBytes(20).toString("hex");
+
+  // Hash and set to resetPasswordToken field
+  user.resetPasswordToken = crypto
+    .createHash("sha256")
+    .update(resetToken)
+    .digest("hex");
+
+  // Set expire time (15 mins from now)
+  user.resetPasswordExpire = Date.now() + 15 * 60 * 1000;
+
+  await user.save({ validateBeforeSave: false });
+
+  // Create reset URL
+  const clientUrl = config.CLIENT_URL.replace(/\/$/, "");
+  const resetUrl = `${clientUrl}/reset-password/${resetToken}`;
+
+  const message = `You are receiving this email because you (or someone else) have requested the reset of a password.\n\nPlease make a POST request to:\n\n${resetUrl}\n\nIf you did not request this, please ignore this email and your password will remain unchanged.`;
+
+  try {
+    const mailResult = await sendEmail({
+      email: user.email,
+      subject: "Password Reset Request - BackChodi Chat",
+      message,
+      html: `
+        <div style="font-family: sans-serif; padding: 20px; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 8px;">
+          <h2 style="color: #10b981; text-align: center;">Password Reset Request</h2>
+          <p>You are receiving this email because you (or someone else) requested a password reset for your BackChodi account.</p>
+          <p>Please click the button below to reset your password. This link is valid for 15 minutes.</p>
+          <div style="text-align: center; margin: 25px 0;">
+            <a href="${resetUrl}" style="display: inline-block; background-color: #10b981; color: #fff; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 15px;">Reset Password</a>
+          </div>
+          <p>If you did not request this, please ignore this email and your password will remain secure.</p>
+          <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;" />
+          <p style="font-size: 12px; color: #64748b;">If you have trouble clicking the button, copy and paste the link below into your browser:</p>
+          <p style="font-size: 12px; color: #2563eb; word-break: break-all;">${resetUrl}</p>
+        </div>
+      `,
+    });
+
+    res.status(200).json(
+      new ApiResponse(
+        200,
+        {
+          emailSent: !mailResult.mocked,
+          token: config.NODE_ENV !== "production" ? resetToken : undefined,
+          resetUrl: config.NODE_ENV !== "production" ? resetUrl : undefined,
+        },
+        mailResult.mocked
+          ? "SMTP not configured. Reset link logged to console."
+          : `Email sent to ${user.email} successfully`
+      )
+    );
+  } catch (err) {
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpire = undefined;
+    await user.save({ validateBeforeSave: false });
+
+    return next(new AppError(500, "Email could not be sent. Try again later."));
+  }
+});
+
+// Reset Password
+export const resetPassword = asyncHandler(async (req, res, next) => {
+  // Hash token
+  const resetPasswordToken = crypto
+    .createHash("sha256")
+    .update(req.params.token)
+    .digest("hex");
+
+  const user = await User.findOne({
+    resetPasswordToken,
+    resetPasswordExpire: { $gt: Date.now() },
+  });
+
+  if (!user) {
+    return next(new AppError(400, "Invalid or expired password reset token"));
+  }
+
+  // Set new password (will trigger userSchema pre-save hashing hook)
+  user.password = req.body.password;
+  user.resetPasswordToken = undefined;
+  user.resetPasswordExpire = undefined;
+
+  await user.save();
+
+  res.status(200).json(new ApiResponse(200, null, "Password reset successfully!"));
+});
+
+// Change Password
+export const changePassword = asyncHandler(async (req, res, next) => {
+  const { oldPassword, newPassword } = req.body;
+  const user = req.user; // populated by auth middleware
+
+  // Check old password
+  if (!(await user.isPasswordCorrect(oldPassword))) {
+    return next(new AppError(400, "Incorrect old password"));
+  }
+
+  // Check if new password is same as old
+  if (oldPassword === newPassword) {
+    return next(new AppError(400, "New password cannot be same as old password"));
+  }
+
+  // Update password (will trigger pre-save hook)
+  user.password = newPassword;
+  await user.save();
+
+  res.status(200).json(new ApiResponse(200, null, "Password updated successfully!"));
 });

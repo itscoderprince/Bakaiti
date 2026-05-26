@@ -24,6 +24,12 @@ const envSchema = z.object({
   JWT_SECRET: z.string().min(10, "JWT secret must be at least 10 characters"),
   JWT_EXPIRES: z.string().default("7d"),
   COOKIE_EXPIRES: z.coerce.number().default(2),
+  SMTP_HOST: z.string().optional(),
+  SMTP_PORT: z.string().optional(),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASS: z.string().optional(),
+  SMTP_FROM_EMAIL: z.string().optional(),
+  SMTP_FROM_NAME: z.string().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);

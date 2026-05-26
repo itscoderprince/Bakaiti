@@ -16,6 +16,8 @@ import {
   X,
   ChevronLeft,
   MessageSquareCode,
+  Check,
+  CheckCheck,
 } from "lucide-react";
 
 /**
@@ -110,6 +112,18 @@ const MessageContainer = ({ contact, messages = [], onSendMessage, isLoading, on
     setSearchQuery("");
   }, [contact?._id]);
 
+  // Join/leave chat socket events to track active chats for real-time status ticks
+  useEffect(() => {
+    const socket = getSocket();
+    if (!socket || !contact?._id) return;
+
+    socket.emit("joinChat", { activeChatId: contact._id });
+
+    return () => {
+      socket.emit("leaveChat");
+    };
+  }, [contact?._id]);
+
   // Stop typing indicator on contact change or unmount
   useEffect(() => {
     return () => {
@@ -174,16 +188,29 @@ const MessageContainer = ({ contact, messages = [], onSendMessage, isLoading, on
 
   if (!contact) {
     return (
-      <div className="flex flex-1 flex-col items-center justify-center bg-muted/10 p-8 text-center h-full">
-        <div className="max-w-md space-y-3">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary mb-4 animate-bounce">
-            <MessageSquareCode className="h-8 w-8" />
+      <div className="flex flex-1 flex-col items-center justify-center bg-radial from-slate-50 via-zinc-100 to-neutral-200 dark:bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] dark:from-slate-900 dark:via-neutral-950 dark:to-black p-8 text-center h-full relative overflow-hidden">
+        {/* Soft Ambient Background Glows */}
+        <div className="absolute top-1/4 left-1/4 w-72 h-72 rounded-full bg-emerald-500/10 blur-3xl animate-pulse" style={{ animationDuration: "8s" }} />
+        <div className="absolute bottom-1/4 right-1/4 w-80 h-80 rounded-full bg-indigo-500/10 blur-3xl animate-pulse" style={{ animationDuration: "12s" }} />
+        
+        <div className="max-w-md space-y-6 relative z-10 p-8 rounded-3xl border border-white/20 dark:border-zinc-800/30 bg-white/50 dark:bg-zinc-900/50 backdrop-blur-xl shadow-xl transition-all duration-300 hover:shadow-2xl">
+          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-500/20 mb-6 animate-bounce">
+            <MessageSquareCode className="h-10 w-10" />
           </div>
-          <h3 className="text-xl font-semibold">No Conversation Selected</h3>
-          <p className="text-sm text-muted-foreground">
-            Select a contact from the sidebar list to start chatting and viewing
-            your message history.
-          </p>
+          
+          <div className="space-y-2">
+            <h3 className="text-2xl font-bold tracking-tight text-foreground">Welcome to BackChodi</h3>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              Select a contact from the sidebar list to start chatting. Experience lightning-fast, real-time message sync with visual status checks.
+            </p>
+          </div>
+          
+          <div className="pt-2">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-ping" />
+              Secure Real-Time Connected
+            </span>
+          </div>
         </div>
       </div>
     );
@@ -193,8 +220,8 @@ const MessageContainer = ({ contact, messages = [], onSendMessage, isLoading, on
     <div className={`flex flex-1 flex-col h-full bg-background overflow-hidden relative ${
       contact ? "flex" : "hidden md:flex"
     }`}>
-      {/* Chat Header (No bottom border as requested) */}
-      <header className="flex flex-col shrink-0 bg-background z-10">
+      {/* Chat Header */}
+      <header className="flex flex-col shrink-0 bg-white/70 dark:bg-zinc-950/70 backdrop-blur-xl border-b border-white/20 dark:border-zinc-800/30 sticky top-0 z-20 transition-all duration-300">
         <div className="flex h-16 items-center justify-between px-3 md:px-6">
           <div className="flex items-center gap-3 min-w-0">
             {onBack && (
@@ -207,31 +234,36 @@ const MessageContainer = ({ contact, messages = [], onSendMessage, isLoading, on
               </button>
             )}
 
-            {/* Contact Details */}
+            {/* Contact Details Avatar with Pulsing Status Ring */}
             <div className="relative shrink-0">
-              {contact.profilePic ? (
-                <img
-                  src={contact.profilePic}
-                  alt={contact.name}
-                  className="flex h-9 w-9 object-cover items-center justify-center rounded-full shadow-sm"
-                />
-              ) : (
-                <div className="flex h-9 w-9 items-center justify-center rounded-full text-white text-sm font-semibold shadow-sm bg-indigo-500">
-                  {contact.name
-                    ? contact.name
-                        .trim()
-                        .split(/\s+/)
-                        .map((n) => n[0])
-                        .filter(Boolean)
-                        .join("")
-                        .substring(0, 2)
-                        .toUpperCase()
-                    : "U"}
-                </div>
-              )}
-              {/* Online presence status indicator dot */}
+              <div className={`relative rounded-full transition-all duration-300 ${
+                isOnline ? "ring-2 ring-emerald-500 ring-offset-2 ring-offset-background dark:ring-offset-zinc-950 animate-pulse" : ""
+              }`}>
+                {contact.profilePic ? (
+                  <img
+                    src={contact.profilePic}
+                    alt={contact.name}
+                    className="flex h-9 w-9 object-cover items-center justify-center rounded-full shadow-sm"
+                  />
+                ) : (
+                  <div className="flex h-9 w-9 items-center justify-center rounded-full text-white text-sm font-semibold shadow-sm bg-gradient-to-tr from-emerald-500 to-teal-600">
+                    {contact.name
+                      ? contact.name
+                          .trim()
+                          .split(/\s+/)
+                          .map((n) => n[0])
+                          .filter(Boolean)
+                          .join("")
+                          .substring(0, 2)
+                          .toUpperCase()
+                      : "U"}
+                  </div>
+                )}
+              </div>
               {isOnline && (
-                <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-background bg-emerald-500" />
+                <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-background dark:border-zinc-950 bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]">
+                  <span className="absolute inset-0 rounded-full bg-emerald-400 animate-ping opacity-75" />
+                </span>
               )}
             </div>
 
@@ -241,21 +273,27 @@ const MessageContainer = ({ contact, messages = [], onSendMessage, isLoading, on
               </span>
               <span className="text-[11px] text-muted-foreground leading-tight truncate">
                 {isTyping ? (
-                  <span className="text-emerald-500 font-medium animate-pulse">
+                  <span className="text-emerald-500 font-semibold animate-pulse">
                     typing...
                   </span>
                 ) : (
-                  isOnline ? "Online" : getLastSeenText(contact?.lastSeen)
+                  isOnline ? (
+                    <span className="text-emerald-500 font-medium">Online</span>
+                  ) : (
+                    getLastSeenText(contact?.lastSeen)
+                  )
                 )}
               </span>
             </div>
           </div>
 
-          {/* Action Buttons */}
+          {/* Action Buttons with Micro-animations */}
           <div className="flex items-center gap-1">
             <IconButton
               icon={Search}
-              className={`h-9 w-9 ${showSearch ? "text-primary bg-primary/10" : ""}`}
+              className={`h-9 w-9 transition-all duration-200 hover:scale-105 hover:bg-muted active:scale-95 ${
+                showSearch ? "text-primary bg-primary/10" : ""
+              }`}
               iconClassName="h-4.5 w-4.5"
               onClick={() => {
                 setShowSearch(!showSearch);
@@ -264,17 +302,17 @@ const MessageContainer = ({ contact, messages = [], onSendMessage, isLoading, on
             />
             <IconButton
               icon={PhoneCall}
-              className="h-9 w-9"
+              className="h-9 w-9 transition-all duration-200 hover:scale-105 hover:bg-muted active:scale-95"
               iconClassName="h-4.5 w-4.5"
             />
             <IconButton
               icon={Video}
-              className="h-9 w-9"
+              className="h-9 w-9 transition-all duration-200 hover:scale-105 hover:bg-muted active:scale-95"
               iconClassName="h-4.5 w-4.5"
             />
             <IconButton
               icon={EllipsisVertical}
-              className="h-9 w-9 hidden sm:inline-flex"
+              className="h-9 w-9 hidden sm:inline-flex transition-all duration-200 hover:scale-105 hover:bg-muted active:scale-95"
               iconClassName="h-4.5 w-4.5"
             />
           </div>
@@ -282,7 +320,7 @@ const MessageContainer = ({ contact, messages = [], onSendMessage, isLoading, on
 
         {/* WhatsApp-style In-chat Search Bar */}
         {showSearch && (
-          <div className="px-2 md:px-4 pb-3 pt-1 animate-in slide-in-from-top-2">
+          <div className="px-2 md:px-4 pb-3 pt-1 animate-in slide-in-from-top-2 duration-200">
             <div className="relative flex items-center">
               <Search className="absolute left-3 h-4 w-4 text-muted-foreground" />
               <Input
@@ -290,12 +328,12 @@ const MessageContainer = ({ contact, messages = [], onSendMessage, isLoading, on
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search messages..."
-                className="pl-9 pr-9 bg-muted/50 border-transparent focus-visible:ring-1 rounded-full h-9"
+                className="pl-9 pr-9 bg-muted/60 border-transparent focus-visible:ring-2 focus-visible:ring-emerald-500/20 focus-visible:border-emerald-500 rounded-full h-9 transition-all duration-200"
               />
               {searchQuery && (
                 <IconButton
                   icon={X}
-                  className="absolute right-1 h-7 w-7 rounded-full"
+                  className="absolute right-1 h-7 w-7 rounded-full hover:bg-muted"
                   iconClassName="h-4 w-4"
                   onClick={() => setSearchQuery("")}
                 />
@@ -305,15 +343,18 @@ const MessageContainer = ({ contact, messages = [], onSendMessage, isLoading, on
         )}
       </header>
 
-      {/* Messages Area */}
-      <ScrollArea className="flex-1 min-h-0 bg-[#efeae2] dark:bg-[#0b141a]">
-        <div className="px-2 py-4 md:p-6 space-y-4">
+      {/* Messages Area (Ambient Radial/Mesh Gradients) */}
+      <ScrollArea className="flex-1 min-h-0 bg-radial from-slate-50 via-zinc-100 to-neutral-200 dark:bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] dark:from-slate-900 dark:via-neutral-950 dark:to-black">
+        <div className="px-3 py-4 md:p-6 space-y-4">
           {isLoading ? (
             <div className="flex justify-center mt-10">
-              <span className="text-muted-foreground text-sm">Loading messages...</span>
+              <div className="flex flex-col items-center gap-2">
+                <div className="h-6 w-6 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent" />
+                <span className="text-muted-foreground text-sm">Loading messages...</span>
+              </div>
             </div>
           ) : filteredMessages.length === 0 && searchQuery ? (
-            <div className="text-center text-muted-foreground text-sm mt-10">
+            <div className="text-center text-muted-foreground text-sm mt-10 bg-background/40 backdrop-blur-sm rounded-xl p-4 max-w-xs mx-auto border border-border/20">
               No messages found for "{searchQuery}"
             </div>
           ) : (
@@ -331,50 +372,78 @@ const MessageContainer = ({ contact, messages = [], onSendMessage, isLoading, on
               return (
                 <div
                   key={messageObj._id}
-                  className={`flex w-full ${isMe ? "justify-end" : "justify-start"}`}
+                  className={`flex w-full ${isMe ? "justify-end" : "justify-start"} animate-in fade-in duration-200`}
                 >
                   <div
                     className={`flex flex-col max-w-[85%] md:max-w-[70%] space-y-1 ${isMe ? "items-end" : "items-start"}`}
                   >
                     {isEmojiOnly ? (
                       <div
-                        className={`rounded-xl px-2 py-1 relative ${
+                        className={`rounded-2xl px-3 py-2 relative backdrop-blur-sm transition-all duration-200 hover:shadow-sm ${
                           isMe
-                            ? "bg-[#d9fdd3] dark:bg-[#005c4b] text-[#111b21] dark:text-[#e9edef] rounded-tr-none"
-                            : "bg-white dark:bg-[#202c33] text-[#111b21] dark:text-[#e9edef] rounded-tl-none"
+                            ? "bg-gradient-to-br from-emerald-500/20 to-teal-600/20 dark:from-emerald-500/30 dark:to-teal-600/30 border border-emerald-500/20 rounded-tr-sm text-foreground"
+                            : "bg-white/50 dark:bg-zinc-800/50 border border-zinc-200/30 dark:border-zinc-700/20 rounded-tl-sm text-foreground"
                         }`}
                       >
                         <p
                           className={`whitespace-pre-wrap wrap-break-words select-all leading-none ${
                             emojiCount === 1
-                              ? "text-[38px] p-1.5"
+                              ? "text-[42px] p-2"
                               : emojiCount === 2
-                              ? "text-[30px] p-1"
-                              : "text-[24px] p-0.5"
+                              ? "text-[34px] p-1.5"
+                              : "text-[28px] p-1"
                           }`}
                         >
                           {messageObj.message}
                         </p>
-                        <div className="flex justify-end pr-1 pb-0.5">
-                          <span className="text-[9px] text-muted-foreground/80 opacity-70">
+                        <div className="flex justify-end items-center gap-1 pr-1 pt-1 opacity-80">
+                          <span className="text-[9px] text-muted-foreground">
                             {timeString}
                           </span>
+                          {isMe && (
+                            <span className="flex shrink-0">
+                              {(messageObj.status === "sent" || !messageObj.status) && (
+                                <Check className="h-3.5 w-3.5 text-muted-foreground/60" />
+                              )}
+                              {messageObj.status === "delivered" && (
+                                <CheckCheck className="h-3.5 w-3.5 text-muted-foreground/60" />
+                              )}
+                              {messageObj.status === "read" && (
+                                <CheckCheck className="h-3.5 w-3.5 text-emerald-500 dark:text-emerald-400" />
+                              )}
+                            </span>
+                          )}
                         </div>
                       </div>
                     ) : (
                       <div
-                        className={`rounded-lg px-3 pt-1.5 pb-1 text-[14.2px] shadow-sm relative min-w-[80px] ${
+                        className={`px-3.5 pt-2 pb-1.5 text-[14.5px] shadow-sm relative min-w-[90px] backdrop-blur-sm transition-all duration-200 ${
                           isMe
-                            ? "bg-[#d9fdd3] dark:bg-[#005c4b] text-[#111b21] dark:text-[#e9edef] rounded-tr-none"
-                            : "bg-white dark:bg-[#202c33] text-[#111b21] dark:text-[#e9edef] rounded-tl-none"
+                            ? "bg-gradient-to-br from-emerald-600 to-teal-700 dark:from-emerald-800/90 dark:to-teal-950/90 text-white rounded-2xl rounded-tr-sm shadow-md hover:shadow-lg"
+                            : "bg-white/90 dark:bg-zinc-800/90 border border-zinc-200/40 dark:border-zinc-700/20 text-foreground rounded-2xl rounded-tl-sm hover:shadow-md"
                         }`}
                       >
-                        <div className="whitespace-pre-wrap wrap-break-words leading-[19px] pb-3 pr-6">
+                        <div className="whitespace-pre-wrap wrap-break-words leading-[20px] pb-3.5 pr-8">
                           {messageObj.message}
                         </div>
-                        <span className="absolute bottom-1 right-2 text-[9.5px] text-muted-foreground/60 select-none">
-                          {timeString}
-                        </span>
+                        <div className={`absolute bottom-1 right-2 flex items-center gap-1 text-[9.5px] select-none ${
+                          isMe ? "text-white/70" : "text-muted-foreground/60"
+                        }`}>
+                          <span>{timeString}</span>
+                          {isMe && (
+                            <span className="flex shrink-0">
+                              {(messageObj.status === "sent" || !messageObj.status) && (
+                                <Check className="h-3.5 w-3.5 text-white/60" />
+                              )}
+                              {messageObj.status === "delivered" && (
+                                <CheckCheck className="h-3.5 w-3.5 text-white/60" />
+                              )}
+                              {messageObj.status === "read" && (
+                                <CheckCheck className="h-3.5 w-3.5 text-cyan-200" />
+                              )}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     )}
                   </div>
@@ -385,19 +454,19 @@ const MessageContainer = ({ contact, messages = [], onSendMessage, isLoading, on
 
           {/* Typing Animation Bubble */}
           {isTyping && !searchQuery && (
-            <div className="flex w-full justify-start animate-fade-in">
+            <div className="flex w-full justify-start animate-in fade-in duration-200">
               <div className="flex flex-col items-start space-y-1">
-                <div className="rounded-xl rounded-tl-none px-4 py-3 bg-white dark:bg-[#202c33] shadow-sm flex items-center gap-1">
+                <div className="rounded-2xl rounded-tl-sm px-4 py-3 bg-white/80 dark:bg-zinc-800/80 border border-zinc-200/40 dark:border-zinc-700/20 shadow-sm backdrop-blur-sm flex items-center gap-1.5">
                   <span
-                    className="h-1.5 w-1.5 rounded-full bg-muted-foreground/60 animate-bounce"
+                    className="h-1.5 w-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-bounce"
                     style={{ animationDelay: "0ms" }}
                   />
                   <span
-                    className="h-1.5 w-1.5 rounded-full bg-muted-foreground/60 animate-bounce"
+                    className="h-1.5 w-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-bounce"
                     style={{ animationDelay: "150ms" }}
                   />
                   <span
-                    className="h-1.5 w-1.5 rounded-full bg-muted-foreground/60 animate-bounce"
+                    className="h-1.5 w-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-bounce"
                     style={{ animationDelay: "300ms" }}
                   />
                 </div>
@@ -408,14 +477,14 @@ const MessageContainer = ({ contact, messages = [], onSendMessage, isLoading, on
         </div>
       </ScrollArea>
 
-      {/* Input Area */}
-      <footer className="relative p-2 md:p-3 bg-[#f0f2f5] dark:bg-[#202c33] shrink-0">
+      {/* Floating Input Panel Container */}
+      <footer className="relative px-3 pb-3 pt-1 bg-transparent shrink-0">
  
         {/* Emoji Picker — floats above the input row, anchored to the left */}
         {showEmojiPicker && (
           <div
             ref={emojiPickerRef}
-            className="absolute bottom-full left-2 right-2 sm:left-3 sm:right-auto mb-2 z-50 shadow-2xl rounded-2xl overflow-hidden w-[calc(100vw-1.5rem)] sm:w-[320px]"
+            className="absolute bottom-full left-3 right-3 sm:left-4 sm:right-auto mb-3 z-50 shadow-2xl rounded-2xl overflow-hidden w-[calc(100vw-2rem)] sm:w-[330px] animate-in slide-in-from-bottom-2 duration-200"
           >
             <EmojiPicker
               onEmojiClick={(emojiData) => {
@@ -432,23 +501,24 @@ const MessageContainer = ({ contact, messages = [], onSendMessage, isLoading, on
  
         <form
           onSubmit={handleSubmit}
-          className="flex items-center gap-1.5 md:gap-2 w-full max-w-5xl mx-auto"
+          className="flex items-center gap-1.5 md:gap-2 w-full max-w-5xl mx-auto rounded-2xl border border-white/20 dark:border-zinc-800/30 bg-white/70 dark:bg-zinc-900/70 backdrop-blur-xl shadow-lg p-2 z-10 transition-all duration-200 focus-within:shadow-xl focus-within:border-emerald-500/30"
         >
-          {/* Toggle emoji picker open/closed */}
+          {/* Toggle emoji picker open/closed with scale and bounce animations */}
           <IconButton
             type="button"
             icon={Smile}
             onClick={() => setShowEmojiPicker((prev) => !prev)}
-            className={`h-10 w-10 shrink-0 rounded-full transition-colors ${
-              showEmojiPicker ? "text-emerald-500 bg-emerald-500/10" : ""
+            className={`h-10 w-10 shrink-0 rounded-full transition-all duration-200 hover:scale-110 active:scale-95 ${
+              showEmojiPicker ? "text-emerald-500 bg-emerald-500/10" : "hover:bg-muted"
             }`}
-            iconClassName="h-6 w-6"
+            iconClassName="h-5.5 w-5.5"
           />
 
+          {/* Plus icon rotates 90deg on hover */}
           <IconButton
             type="button"
             icon={Plus}
-            className="h-10 w-10 shrink-0 rounded-full"
+            className="h-10 w-10 shrink-0 rounded-full transition-all duration-200 hover:rotate-90 hover:scale-110 hover:bg-muted active:scale-95"
             iconClassName="h-5 w-5"
           />
 
@@ -456,15 +526,20 @@ const MessageContainer = ({ contact, messages = [], onSendMessage, isLoading, on
             value={inputText}
             onChange={handleInputChange}
             placeholder="Type a message"
-            className="flex-1 bg-white dark:bg-[#2a3942] border-transparent rounded-full h-10 px-4 focus-visible:ring-1 focus-visible:ring-emerald-500 shadow-sm"
+            className="flex-1 bg-muted/40 dark:bg-zinc-800/40 border-transparent focus-visible:ring-1 focus-visible:ring-emerald-500 rounded-xl h-10 px-4 transition-all duration-200 shadow-inner"
           />
 
+          {/* Send icon scales up and translates slightly on hover */}
           <IconButton
             type="submit"
             icon={SendHorizontal}
             variant="default"
             disabled={!inputText.trim()}
-            className="h-10 w-10 shrink-0 bg-emerald-500 hover:bg-emerald-600 text-white transition-all shadow-sm rounded-full"
+            className={`h-10 w-10 shrink-0 text-white shadow-sm rounded-full transition-all duration-200 ${
+              inputText.trim() 
+                ? "bg-emerald-500 hover:bg-emerald-600 hover:scale-105 hover:translate-x-0.5 active:scale-95" 
+                : "bg-muted text-muted-foreground opacity-50 cursor-not-allowed"
+            }`}
             iconClassName="h-4.5 w-4.5 ml-0.5"
           />
         </form>

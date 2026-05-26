@@ -56,12 +56,12 @@ const Login = () => {
                       <Lock size={14} className="text-muted-foreground" />
                       Password
                     </Label>
-                    <a
-                      href="#"
-                      className="ml-auto text-sm underline-offset-4 hover:underline text-muted-foreground"
+                    <Link
+                      to="/forgot-password"
+                      className="ml-auto text-sm underline-offset-4 hover:underline text-muted-foreground font-medium"
                     >
                       Forgot your password?
-                    </a>
+                    </Link>
                   </div>
                   <PasswordInput
                     id="password"

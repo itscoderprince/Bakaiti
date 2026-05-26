@@ -96,3 +96,57 @@ export const getOtherUsersThunk = createAsyncThunk(
     }
   }
 );
+
+/**
+ * Thunk to request a password reset email/link.
+ */
+export const forgotPasswordThunk = createAsyncThunk(
+  "auth/forgotPassword",
+  async (emailData, { rejectWithValue }) => {
+    try {
+      const data = await authApi.forgotPassword(emailData);
+      toast.success(data.message || "Reset link dispatched!");
+      return data.data;
+    } catch (error) {
+      const errorMsg = error.response?.data?.message || error.message || "Failed to request reset";
+      toast.error(errorMsg);
+      return rejectWithValue(errorMsg);
+    }
+  }
+);
+
+/**
+ * Thunk to reset password using token.
+ */
+export const resetPasswordThunk = createAsyncThunk(
+  "auth/resetPassword",
+  async ({ token, password, confirmPassword }, { rejectWithValue }) => {
+    try {
+      const data = await authApi.resetPassword({ token, password, confirmPassword });
+      toast.success(data.message || "Password reset completed successfully!");
+      return data.data;
+    } catch (error) {
+      const errorMsg = error.response?.data?.message || error.message || "Failed to reset password";
+      toast.error(errorMsg);
+      return rejectWithValue(errorMsg);
+    }
+  }
+);
+
+/**
+ * Thunk to change password for logged-in user.
+ */
+export const changePasswordThunk = createAsyncThunk(
+  "auth/changePassword",
+  async (passwordData, { rejectWithValue }) => {
+    try {
+      const data = await authApi.changePassword(passwordData);
+      toast.success(data.message || "Password updated successfully!");
+      return data.data;
+    } catch (error) {
+      const errorMsg = error.response?.data?.message || error.message || "Failed to change password";
+      toast.error(errorMsg);
+      return rejectWithValue(errorMsg);
+    }
+  }
+);

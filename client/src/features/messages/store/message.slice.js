@@ -54,6 +54,24 @@ const messageSlice = createSlice({
       const { contactId, timestamp } = action.payload;
       state.lastMessageTimes[contactId] = timestamp;
       saveLastMessageTimes(state.lastMessageTimes);
+    },
+    // Action to mark sent messages in active conversation as read
+    markMessagesAsRead: (state, action) => {
+      const { readerId } = action.payload;
+      state.messages.forEach((msg) => {
+        if (msg.receiverId === readerId && msg.status !== "read") {
+          msg.status = "read";
+        }
+      });
+    },
+    // Action to mark sent messages in active conversation as delivered
+    markMessagesAsDelivered: (state, action) => {
+      const { receiverId } = action.payload;
+      state.messages.forEach((msg) => {
+        if (msg.receiverId === receiverId && msg.status === "sent") {
+          msg.status = "delivered";
+        }
+      });
     }
   },
   extraReducers: (builder) => {
@@ -97,5 +115,11 @@ const messageSlice = createSlice({
   },
 });
 
-export const { clearMessages, appendMessage, updateLastMessageTime } = messageSlice.actions;
+export const {
+  clearMessages,
+  appendMessage,
+  updateLastMessageTime,
+  markMessagesAsRead,
+  markMessagesAsDelivered,
+} = messageSlice.actions;
 export default messageSlice.reducer;

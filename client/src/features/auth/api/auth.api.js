@@ -52,5 +52,35 @@ export const authApi = {
   getOtherUsers: async () => {
     const response = await axiosInstance.get("/user/");
     return response.data;
+  },
+
+  /**
+   * Sends a password reset request email.
+   * @param {Object} emailData - { email }
+   * @returns {Promise<Object>}
+   */
+  forgotPassword: async (emailData) => {
+    const response = await axiosInstance.post("/user/forgot-password", emailData);
+    return response.data;
+  },
+
+  /**
+   * Resets password using a verification token.
+   * @param {Object} payload - { token, password, confirmPassword }
+   * @returns {Promise<Object>}
+   */
+  resetPassword: async ({ token, ...passwordData }) => {
+    const response = await axiosInstance.post(`/user/reset-password/${token}`, passwordData);
+    return response.data;
+  },
+
+  /**
+   * Changes the password of currently authenticated user.
+   * @param {Object} passwordData - { oldPassword, newPassword, confirmNewPassword }
+   * @returns {Promise<Object>}
+   */
+  changePassword: async (passwordData) => {
+    const response = await axiosInstance.post("/user/change-password", passwordData);
+    return response.data;
   }
 };

@@ -5,6 +5,8 @@ import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import Home from "./pages/home/Home.jsx";
 import Login from "./features/auth/components/Login.jsx";
 import Signup from "./features/auth/components/Signup.jsx";
+import ForgotPassword from "./features/auth/components/ForgotPassword.jsx";
+import ResetPassword from "./features/auth/components/ResetPassword.jsx";
 import { Provider } from "react-redux";
 import { store } from "./store/store.js";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -38,6 +40,22 @@ const router = createBrowserRouter([
         element: (
           <PublicRoute>
             <Signup />
+          </PublicRoute>
+        ),
+      },
+      {
+        path: "forgot-password",
+        element: (
+          <PublicRoute>
+            <ForgotPassword />
+          </PublicRoute>
+        ),
+      },
+      {
+        path: "reset-password/:token",
+        element: (
+          <PublicRoute>
+            <ResetPassword />
           </PublicRoute>
         ),
       },
