@@ -128,8 +128,10 @@ const UserSidebar = ({
                   // Extract initials for avatar
                   const initials = user.fullname
                     ? user.fullname
-                        .split(" ")
+                        .trim()
+                        .split(/\s+/)
                         .map((n) => n[0])
+                        .filter(Boolean)
                         .join("")
                         .substring(0, 2)
                         .toUpperCase()
@@ -211,8 +213,10 @@ const UserSidebar = ({
                       <div className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-800 text-white text-xs font-semibold">
                         {currentUser?.fullname
                           ? currentUser.fullname
-                              .split(" ")
+                              .trim()
+                              .split(/\s+/)
                               .map((n) => n[0])
+                              .filter(Boolean)
                               .join("")
                               .substring(0, 2)
                               .toUpperCase()

@@ -17,7 +17,7 @@ axiosInstance.interceptors.request.use(
   },
   (error) => {
     return Promise.reject(error);
-  }
+  },
 );
 
 // Response interceptor
@@ -32,7 +32,7 @@ axiosInstance.interceptors.response.use(
       // You can dispatch a logout action or redirect to login here if needed
     }
     return Promise.reject(error);
-  }
+  },
 );
 
 export default axiosInstance;

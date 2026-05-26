@@ -3,6 +3,7 @@ import AppError from "../utils/AppError.js";
 import ApiResponse from "../utils/ApiResponse.js";
 import User from "../models/user.model.js";
 import { generateTokenAndSetCookie } from "../utils/generateToken.js";
+import { config } from "../config/env.js";
 
 // Register
 export const register = asyncHandler(async (req, res, next) => {
@@ -14,16 +15,13 @@ export const register = asyncHandler(async (req, res, next) => {
     return next(new AppError(400, "Username or email already exists"));
   }
 
-  // Generate a highly reliable default avatar using UI-Avatars
-  const profilePic = `https://ui-avatars.com/api/?name=${username}&background=random`;
-
   const newUser = await User.create({
     fullname,
     username,
     email,
     password,
     gender,
-    profilePic,
+    profilePic: req.body.profilePic || "",
   });
 
   // Generate JWT token and set it in HTTP-only cookie

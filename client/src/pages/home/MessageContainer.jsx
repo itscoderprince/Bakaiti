@@ -196,8 +196,15 @@ const MessageContainer = ({ contact, messages = [], onSendMessage, isLoading, on
               ) : (
                 <div className="flex h-9 w-9 items-center justify-center rounded-full text-white text-sm font-semibold shadow-sm bg-indigo-500">
                   {contact.name
-                    ? contact.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
-                    : 'U'}
+                    ? contact.name
+                        .trim()
+                        .split(/\s+/)
+                        .map((n) => n[0])
+                        .filter(Boolean)
+                        .join("")
+                        .substring(0, 2)
+                        .toUpperCase()
+                    : "U"}
                 </div>
               )}
               {/* Online presence status indicator dot */}
