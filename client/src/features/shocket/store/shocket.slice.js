@@ -45,6 +45,7 @@ const shocketSlice = createSlice({
         query: {
           userId,
         },
+        transports: ["websocket"],
       });
 
       state.isConnected = true;
