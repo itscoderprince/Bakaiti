@@ -1,6 +1,5 @@
 import { Link } from "react-router-dom";
-import { Loader2 } from "lucide-react";
-import { FaUser, FaLock } from "react-icons/fa";
+import { Loader2, User, Lock } from "lucide-react";
 import PasswordInput from "../../../components/PasswordInput";
 import { useLogin } from "../hooks/useLogin.js";
 import {
@@ -34,7 +33,7 @@ const Login = () => {
               <div className="grid gap-6">
                 <div className="grid gap-2">
                   <Label htmlFor="username" className="flex items-center gap-2">
-                    <FaUser size={14} className="text-muted-foreground" />
+                    <User size={14} className="text-muted-foreground" />
                     Username
                   </Label>
                   <Input
@@ -54,7 +53,7 @@ const Login = () => {
                       htmlFor="password"
                       className="flex items-center gap-2"
                     >
-                      <FaLock size={14} className="text-muted-foreground" />
+                      <Lock size={14} className="text-muted-foreground" />
                       Password
                     </Label>
                     <a

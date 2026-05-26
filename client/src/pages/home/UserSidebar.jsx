@@ -25,12 +25,12 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   Search,
-  Settings,
+  Settings2,
   LogOut,
   Moon,
   Sun,
-  MoreVertical,
-  User as UserIcon,
+  ChevronsUpDown,
+  CircleUser,
 } from "lucide-react";
 import { useSelector } from "react-redux";
 
@@ -237,18 +237,18 @@ const UserSidebar = ({
                     </span>
                   </div>
                 </div>
-                <MoreVertical className="h-4 w-4 text-muted-foreground opacity-60 shrink-0" />
+                <ChevronsUpDown className="h-4 w-4 text-muted-foreground opacity-60 shrink-0" />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuGroup>
                   <DropdownMenuLabel>My Account</DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem className="cursor-pointer gap-2">
-                    <UserIcon className="h-4 w-4" />
+                    <CircleUser className="h-4 w-4" />
                     Profile Details
                   </DropdownMenuItem>
                   <DropdownMenuItem className="cursor-pointer gap-2">
-                    <Settings className="h-4 w-4" />
+                    <Settings2 className="h-4 w-4" />
                     Settings
                   </DropdownMenuItem>
                   <DropdownMenuItem

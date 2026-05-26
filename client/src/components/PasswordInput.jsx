@@ -1,6 +1,5 @@
 import { useState, forwardRef } from "react";
-import { FaEye } from "react-icons/fa";
-import { LuEyeClosed } from "react-icons/lu";
+import { Eye, EyeOff } from "lucide-react";
 import { Input } from "@/components/ui/input";
 
 const PasswordInput = forwardRef(({
@@ -32,7 +31,7 @@ const PasswordInput = forwardRef(({
         onClick={() => setShowPassword(!showPassword)}
         className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground focus:outline-none flex items-center justify-center cursor-pointer"
       >
-        {showPassword ? <LuEyeClosed size={16} /> : <FaEye size={16} />}
+        {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
       </button>
     </div>
   );

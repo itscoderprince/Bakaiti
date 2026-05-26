@@ -57,8 +57,8 @@ const Home = () => {
   const contactProps = activeContact ? { ...activeContact, name: activeContact.fullname } : null;
 
   return (
-    <SidebarProvider>
-      <div className="flex h-screen w-screen overflow-hidden bg-background text-foreground">
+    <SidebarProvider className="h-dvh w-screen overflow-hidden">
+      <div className="flex h-full w-full overflow-hidden bg-background text-foreground">
         <UserSidebar
           activeContactId={activeContactId}
           setActiveContactId={setActiveContactId}

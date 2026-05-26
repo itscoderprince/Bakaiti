@@ -1,7 +1,5 @@
 import { Link } from "react-router-dom";
-import { Loader2 } from "lucide-react";
-import { FaUser, FaLock, FaImage, FaVenusMars } from "react-icons/fa";
-import { MdAlternateEmail } from "react-icons/md";
+import { Loader2, User, Lock, Image, Users, Mail } from "lucide-react";
 import { Controller } from "react-hook-form";
 import PasswordInput from "../../../components/PasswordInput";
 import { useSignup } from "../hooks/useSignup.js";
@@ -46,7 +44,7 @@ const Signup = () => {
               <div className="grid gap-4">
                 <div className="grid gap-2">
                   <Label htmlFor="fullname" className="flex items-center gap-2">
-                    <FaUser size={14} className="text-muted-foreground" />
+                    <User size={14} className="text-muted-foreground" />
                     Full Name
                   </Label>
                   <Input
@@ -64,7 +62,7 @@ const Signup = () => {
 
                 <div className="grid gap-2">
                   <Label htmlFor="username" className="flex items-center gap-2">
-                    <FaUser size={14} className="text-muted-foreground" />
+                    <User size={14} className="text-muted-foreground" />
                     Username
                   </Label>
                   <Input
@@ -82,7 +80,7 @@ const Signup = () => {
 
                 <div className="grid gap-2">
                   <Label htmlFor="email" className="flex items-center gap-2">
-                    <MdAlternateEmail
+                    <Mail
                       size={14}
                       className="text-muted-foreground"
                     />
@@ -107,7 +105,7 @@ const Signup = () => {
                       htmlFor="password"
                       className="flex items-center gap-2"
                     >
-                      <FaLock size={14} className="text-muted-foreground" />
+                      <Lock size={14} className="text-muted-foreground" />
                       Password
                     </Label>
                     <PasswordInput id="password" {...register("password")} />
@@ -123,7 +121,7 @@ const Signup = () => {
                       htmlFor="confirmpassword"
                       className="flex items-center gap-2"
                     >
-                      <FaLock size={14} className="text-muted-foreground" />
+                      <Lock size={14} className="text-muted-foreground" />
                       Confirm Password
                     </Label>
                     <PasswordInput
@@ -141,7 +139,7 @@ const Signup = () => {
 
                 <div className="grid gap-2">
                   <Label htmlFor="gender" className="flex items-center gap-2">
-                    <FaVenusMars size={14} className="text-muted-foreground" />
+                    <Users size={14} className="text-muted-foreground" />
                     Gender
                   </Label>
                   <Controller
@@ -175,7 +173,7 @@ const Signup = () => {
                     htmlFor="profilePic"
                     className="flex items-center gap-2"
                   >
-                    <FaImage size={14} className="text-muted-foreground" />
+                    <Image size={14} className="text-muted-foreground" />
                     Profile Picture
                   </Label>
                   <Input

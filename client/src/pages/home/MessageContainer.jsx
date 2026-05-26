@@ -2,18 +2,20 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { useSelector } from "react-redux";
 import { Input } from "@/components/ui/input";
 import { IconButton } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { getSocket } from "../../features/shocket/store/shocket.slice.js";
 import EmojiPicker from "emoji-picker-react";
 import {
   Search,
-  Phone,
+  PhoneCall,
   Video,
-  Paperclip,
-  Send,
+  Plus,
+  SendHorizontal,
   Smile,
-  MoreVertical,
+  EllipsisVertical,
   X,
-  ArrowLeft,
+  ChevronLeft,
+  MessageSquareCode,
 } from "lucide-react";
 
 /**
@@ -43,6 +45,26 @@ const getLastSeenText = (timestamp) => {
   } catch (err) {
     return "Offline";
   }
+};
+
+/**
+ * Helper to check if a string contains ONLY emojis (up to 3 emojis).
+ * Returns the count of emojis if only emojis are present, otherwise 0.
+ */
+const getEmojiOnlyCount = (text) => {
+  if (!text) return 0;
+  
+  // Remove spaces, Zero Width Joiners (\u200D), Variation Selectors (\uFE0F), and skin tone modifiers (FITZPATRICK modifiers \uD83C\uDFFB-\uD83C\uDFFF)
+  const emojiStr = text.replace(/[\s\uFE0F\u200D]/g, '').replace(/[\uD83C][\uDFFB-\uDFFF]/g, '');
+  if (!emojiStr) return 0;
+  
+  // Check if the remaining string consists solely of emojis (extended pictographic)
+  const emojiRegex = /^\p{Extended_Pictographic}+$/u;
+  if (!emojiRegex.test(emojiStr)) return 0;
+  
+  // Count the individual emoji glyphs
+  const glyphs = emojiStr.match(/\p{Extended_Pictographic}/gu);
+  return glyphs ? glyphs.length : 0;
 };
 
 const MessageContainer = ({ contact, messages = [], onSendMessage, isLoading, onBack }) => {
@@ -154,8 +176,8 @@ const MessageContainer = ({ contact, messages = [], onSendMessage, isLoading, on
     return (
       <div className="flex flex-1 flex-col items-center justify-center bg-muted/10 p-8 text-center h-full">
         <div className="max-w-md space-y-3">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary mb-4">
-            <Send className="h-8 w-8 rotate-45" />
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary mb-4 animate-bounce">
+            <MessageSquareCode className="h-8 w-8" />
           </div>
           <h3 className="text-xl font-semibold">No Conversation Selected</h3>
           <p className="text-sm text-muted-foreground">
@@ -181,7 +203,7 @@ const MessageContainer = ({ contact, messages = [], onSendMessage, isLoading, on
                 className="md:hidden p-1 mr-1 rounded-full hover:bg-muted text-muted-foreground transition-colors shrink-0"
                 aria-label="Back to contacts"
               >
-                <ArrowLeft className="h-5 w-5" />
+                <ChevronLeft className="h-5 w-5" />
               </button>
             )}
 
@@ -241,7 +263,7 @@ const MessageContainer = ({ contact, messages = [], onSendMessage, isLoading, on
               }}
             />
             <IconButton
-              icon={Phone}
+              icon={PhoneCall}
               className="h-9 w-9"
               iconClassName="h-4.5 w-4.5"
             />
@@ -251,7 +273,7 @@ const MessageContainer = ({ contact, messages = [], onSendMessage, isLoading, on
               iconClassName="h-4.5 w-4.5"
             />
             <IconButton
-              icon={MoreVertical}
+              icon={EllipsisVertical}
               className="h-9 w-9 hidden sm:inline-flex"
               iconClassName="h-4.5 w-4.5"
             />
@@ -284,77 +306,107 @@ const MessageContainer = ({ contact, messages = [], onSendMessage, isLoading, on
       </header>
 
       {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto px-2 py-4 md:p-6 space-y-4 bg-[#efeae2] dark:bg-[#0b141a] scrollbar-thin">
-        {isLoading ? (
-          <div className="flex justify-center mt-10">
-            <span className="text-muted-foreground text-sm">Loading messages...</span>
-          </div>
-        ) : filteredMessages.length === 0 && searchQuery ? (
-          <div className="text-center text-muted-foreground text-sm mt-10">
-            No messages found for "{searchQuery}"
-          </div>
-        ) : (
-          filteredMessages.map((messageObj) => {
-            const isMe = messageObj.senderId === myUser?._id;
-            
-            // Format time
-            const timeString = messageObj.createdAt 
-              ? new Date(messageObj.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-              : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      <ScrollArea className="flex-1 min-h-0 bg-[#efeae2] dark:bg-[#0b141a]">
+        <div className="px-2 py-4 md:p-6 space-y-4">
+          {isLoading ? (
+            <div className="flex justify-center mt-10">
+              <span className="text-muted-foreground text-sm">Loading messages...</span>
+            </div>
+          ) : filteredMessages.length === 0 && searchQuery ? (
+            <div className="text-center text-muted-foreground text-sm mt-10">
+              No messages found for "{searchQuery}"
+            </div>
+          ) : (
+            filteredMessages.map((messageObj) => {
+              const isMe = messageObj.senderId === myUser?._id;
+              
+              // Format time
+              const timeString = messageObj.createdAt 
+                ? new Date(messageObj.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-            return (
-              <div
-                key={messageObj._id}
-                className={`flex w-full ${isMe ? "justify-end" : "justify-start"}`}
-              >
+              const emojiCount = getEmojiOnlyCount(messageObj.message);
+              const isEmojiOnly = emojiCount > 0 && emojiCount <= 3;
+
+              return (
                 <div
-                  className={`flex flex-col max-w-[85%] md:max-w-[70%] space-y-1 ${isMe ? "items-end" : "items-start"}`}
+                  key={messageObj._id}
+                  className={`flex w-full ${isMe ? "justify-end" : "justify-start"}`}
                 >
                   <div
-                    className={`rounded-xl px-3 py-2 text-[15px] shadow-sm relative ${
-                      isMe
-                        ? "bg-[#d9fdd3] dark:bg-[#005c4b] text-[#111b21] dark:text-[#e9edef] rounded-tr-none"
-                        : "bg-white dark:bg-[#202c33] text-[#111b21] dark:text-[#e9edef] rounded-tl-none"
-                    }`}
+                    className={`flex flex-col max-w-[85%] md:max-w-[70%] space-y-1 ${isMe ? "items-end" : "items-start"}`}
                   >
-                    <p className="whitespace-pre-wrap wrap-break-words leading-snug">
-                      {messageObj.message}
-                    </p>
-                    <div className="flex justify-end mt-1">
-                      <span className="text-[10px] text-muted-foreground/80 opacity-70">
-                        {timeString}
-                      </span>
-                    </div>
+                    {isEmojiOnly ? (
+                      <div
+                        className={`rounded-xl px-2 py-1 relative ${
+                          isMe
+                            ? "bg-[#d9fdd3] dark:bg-[#005c4b] text-[#111b21] dark:text-[#e9edef] rounded-tr-none"
+                            : "bg-white dark:bg-[#202c33] text-[#111b21] dark:text-[#e9edef] rounded-tl-none"
+                        }`}
+                      >
+                        <p
+                          className={`whitespace-pre-wrap wrap-break-words select-all leading-none ${
+                            emojiCount === 1
+                              ? "text-[38px] p-1.5"
+                              : emojiCount === 2
+                              ? "text-[30px] p-1"
+                              : "text-[24px] p-0.5"
+                          }`}
+                        >
+                          {messageObj.message}
+                        </p>
+                        <div className="flex justify-end pr-1 pb-0.5">
+                          <span className="text-[9px] text-muted-foreground/80 opacity-70">
+                            {timeString}
+                          </span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div
+                        className={`rounded-lg px-3 pt-1.5 pb-1 text-[14.2px] shadow-sm relative min-w-[80px] ${
+                          isMe
+                            ? "bg-[#d9fdd3] dark:bg-[#005c4b] text-[#111b21] dark:text-[#e9edef] rounded-tr-none"
+                            : "bg-white dark:bg-[#202c33] text-[#111b21] dark:text-[#e9edef] rounded-tl-none"
+                        }`}
+                      >
+                        <div className="whitespace-pre-wrap wrap-break-words leading-[19px] pb-3 pr-6">
+                          {messageObj.message}
+                        </div>
+                        <span className="absolute bottom-1 right-2 text-[9.5px] text-muted-foreground/60 select-none">
+                          {timeString}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
-              </div>
-            );
-          })
-        )}
+              );
+            })
+          )}
 
-        {/* Typing Animation Bubble */}
-        {isTyping && !searchQuery && (
-          <div className="flex w-full justify-start animate-fade-in">
-            <div className="flex flex-col items-start space-y-1">
-              <div className="rounded-xl rounded-tl-none px-4 py-3 bg-white dark:bg-[#202c33] shadow-sm flex items-center gap-1">
-                <span
-                  className="h-1.5 w-1.5 rounded-full bg-muted-foreground/60 animate-bounce"
-                  style={{ animationDelay: "0ms" }}
-                />
-                <span
-                  className="h-1.5 w-1.5 rounded-full bg-muted-foreground/60 animate-bounce"
-                  style={{ animationDelay: "150ms" }}
-                />
-                <span
-                  className="h-1.5 w-1.5 rounded-full bg-muted-foreground/60 animate-bounce"
-                  style={{ animationDelay: "300ms" }}
-                />
+          {/* Typing Animation Bubble */}
+          {isTyping && !searchQuery && (
+            <div className="flex w-full justify-start animate-fade-in">
+              <div className="flex flex-col items-start space-y-1">
+                <div className="rounded-xl rounded-tl-none px-4 py-3 bg-white dark:bg-[#202c33] shadow-sm flex items-center gap-1">
+                  <span
+                    className="h-1.5 w-1.5 rounded-full bg-muted-foreground/60 animate-bounce"
+                    style={{ animationDelay: "0ms" }}
+                  />
+                  <span
+                    className="h-1.5 w-1.5 rounded-full bg-muted-foreground/60 animate-bounce"
+                    style={{ animationDelay: "150ms" }}
+                  />
+                  <span
+                    className="h-1.5 w-1.5 rounded-full bg-muted-foreground/60 animate-bounce"
+                    style={{ animationDelay: "300ms" }}
+                  />
+                </div>
               </div>
             </div>
-          </div>
-        )}
-        <div ref={messagesEndRef} />
-      </div>
+          )}
+          <div ref={messagesEndRef} />
+        </div>
+      </ScrollArea>
 
       {/* Input Area */}
       <footer className="relative p-2 md:p-3 bg-[#f0f2f5] dark:bg-[#202c33] shrink-0">
@@ -395,7 +447,7 @@ const MessageContainer = ({ contact, messages = [], onSendMessage, isLoading, on
 
           <IconButton
             type="button"
-            icon={Paperclip}
+            icon={Plus}
             className="h-10 w-10 shrink-0 rounded-full"
             iconClassName="h-5 w-5"
           />
@@ -409,7 +461,7 @@ const MessageContainer = ({ contact, messages = [], onSendMessage, isLoading, on
 
           <IconButton
             type="submit"
-            icon={Send}
+            icon={SendHorizontal}
             variant="default"
             disabled={!inputText.trim()}
             className="h-10 w-10 shrink-0 bg-emerald-500 hover:bg-emerald-600 text-white transition-all shadow-sm rounded-full"
