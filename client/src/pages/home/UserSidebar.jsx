@@ -49,10 +49,12 @@ const UserSidebar = ({
   const { lastMessageTimes } = useSelector((store) => store.messages);
 
   // 1. Filter contacts based on the search query input
-  const filteredUsers = otherUsers?.filter((user) => 
-    user.fullname?.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    user.username?.toLowerCase().includes(searchQuery.toLowerCase())
-  ) || [];
+  const filteredUsers =
+    otherUsers?.filter(
+      (user) =>
+        user.fullname?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        user.username?.toLowerCase().includes(searchQuery.toLowerCase()),
+    ) || [];
 
   // 2. Sort filtered contacts so that users with the most recent message exchange appear at the top.
   // Fallback to their creation date (registration date) so list order is consistent.
@@ -73,7 +75,7 @@ const UserSidebar = ({
 
   return (
     <Sidebar
-      className={`border-r border-sidebar-border bg-sidebar transition-all duration-200 !w-full md:!w-[22rem] ${
+      className={`border-r border-sidebar-border bg-sidebar transition-all duration-200 w-full! md:w-88! ${
         activeContactId ? "hidden md:flex" : "flex"
       }`}
       collapsible="none"
@@ -122,11 +124,16 @@ const UserSidebar = ({
               ) : (
                 sortedUsers.map((user) => {
                   const isActive = user._id === activeContactId;
-                  
+
                   // Extract initials for avatar
                   const initials = user.fullname
-                    ? user.fullname.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
-                    : user.username?.substring(0, 2).toUpperCase() || 'U';
+                    ? user.fullname
+                        .split(" ")
+                        .map((n) => n[0])
+                        .join("")
+                        .substring(0, 2)
+                        .toUpperCase()
+                    : user.username?.substring(0, 2).toUpperCase() || "U";
 
                   return (
                     <SidebarMenuItem key={user._id} className="mb-0.5">
@@ -203,8 +210,15 @@ const UserSidebar = ({
                     ) : (
                       <div className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-800 text-white text-xs font-semibold">
                         {currentUser?.fullname
-                          ? currentUser.fullname.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
-                          : currentUser?.username?.substring(0, 2).toUpperCase() || 'U'}
+                          ? currentUser.fullname
+                              .split(" ")
+                              .map((n) => n[0])
+                              .join("")
+                              .substring(0, 2)
+                              .toUpperCase()
+                          : currentUser?.username
+                              ?.substring(0, 2)
+                              .toUpperCase() || "U"}
                       </div>
                     )}
                     {/* Assume the current user is always online */}
@@ -212,10 +226,10 @@ const UserSidebar = ({
                   </div>
                   <div className="flex flex-col text-left min-w-0">
                     <span className="font-medium text-xs truncate">
-                      {currentUser?.fullname || 'User'}
+                      {currentUser?.fullname || "User"}
                     </span>
                     <span className="text-[10px] text-muted-foreground truncate">
-                      @{currentUser?.username || 'user'}
+                      @{currentUser?.username || "user"}
                     </span>
                   </div>
                 </div>

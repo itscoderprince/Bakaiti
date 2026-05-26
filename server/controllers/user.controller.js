@@ -87,11 +87,13 @@ export const getProfile = asyncHandler(async (req, res, next) => {
     );
 });
 
-// Logout
 export const logout = asyncHandler(async (req, res, next) => {
+  const isProduction = config.NODE_ENV === "production";
   res.cookie("jwt", "", {
     httpOnly: true,
     expires: new Date(0),
+    sameSite: isProduction ? "none" : "lax",
+    secure: isProduction,
   });
 
   res

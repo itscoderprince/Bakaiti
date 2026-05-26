@@ -15,11 +15,13 @@ export const generateTokenAndSetCookie = (userId, res) => {
     expiresIn: config.JWT_EXPIRES,
   });
 
+  const isProduction = config.NODE_ENV === "production";
+
   res.cookie("jwt", token, {
     maxAge: config.COOKIE_EXPIRES * 24 * 60 * 60 * 1000, // days → ms
     httpOnly: true,
-    sameSite: "strict",
-    secure: config.NODE_ENV !== "development",
+    sameSite: isProduction ? "none" : "lax",
+    secure: isProduction,
   });
 
   return token;
