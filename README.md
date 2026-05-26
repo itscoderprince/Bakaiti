@@ -20,20 +20,20 @@ graph TD
     classDef server fill:#10b981,stroke:#064e3b,stroke-width:2px,color:#fff;
     classDef db fill:#f59e0b,stroke:#78350f,stroke-width:2px,color:#fff;
 
-    subgraph Client [React Frontend (Port 5173)]
+    subgraph Client ["React Frontend (Port 5173)"]
         A[App Router]:::client
         B[Redux Store]:::client
         C[Socket.io-Client]:::client
     end
 
-    subgraph Backend [Express API + Socket Server (Port 3500)]
+    subgraph Backend ["Express API + Socket Server (Port 3500)"]
         D[Express Router]:::server
         E[Shocket Handler]:::server
         F[JWT Middlewares]:::server
     end
 
-    subgraph Database [Database Storage]
-        G[(MongoDB Atlas)]:::db
+    subgraph Database ["Database Storage"]
+        G[("MongoDB Atlas")]:::db
     end
 
     A -->|HTTP Requests| D
@@ -123,19 +123,19 @@ sequenceDiagram
     participant C as Client (Browser)
     participant S as Server (Socket.io Gateway)
     
-    C->>S: connect (with auth query userId)
+    C->>S: connect with auth query userId
     Note over S: Updates user to online,<br/>Updates DB state
-    S-->>C: getOnlineUsers (updates live list)
+    S-->>C: getOnlineUsers updates live list
     
-    C->>S: typing (contactId)
-    S-->>C: typing (broadcast to room)
+    C->>S: typing contactId
+    S-->>C: typing broadcast to room
     
-    C->>S: stopTyping (contactId)
-    S-->>C: stopTyping (broadcast to room)
+    C->>S: stopTyping contactId
+    S-->>C: stopTyping broadcast to room
     
     C->>S: disconnect
     Note over S: Saves new timestamp to MongoDB<br/>Updates DB state
-    S-->>C: userLastSeenUpdate (userId, timestamp)
+    S-->>C: userLastSeenUpdate userId, timestamp
 ```
 
 | Event Name | Type | Direction | Payload | Description |
