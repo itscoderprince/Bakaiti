@@ -26,6 +26,9 @@ Connection();
 const port = config.PORT;
 
 // Routes
+app.get("/", (req, res) => {
+  res.json({ message: "BackChodi API is running successfully!" });
+});
 app.use("/api/v1/user", userRoute);
 app.use("/api/v1/message", messageRoute);
 
