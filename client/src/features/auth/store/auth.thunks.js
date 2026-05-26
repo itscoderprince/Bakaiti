@@ -2,6 +2,11 @@ import { createAsyncThunk } from "@reduxjs/toolkit";
 import { authApi } from "../api/auth.api.js";
 import toast from "react-hot-toast";
 
+/**
+ * Thunk to handle user login.
+ * On success: Returns user data and displays a success toast.
+ * On failure: Returns rejected promise with error message and displays an error toast.
+ */
 export const loginUserThunk = createAsyncThunk(
   "auth/login",
   async (credentials, { rejectWithValue }) => {
@@ -17,6 +22,11 @@ export const loginUserThunk = createAsyncThunk(
   }
 );
 
+/**
+ * Thunk to handle new user registration.
+ * On success: Returns user data and displays a success toast.
+ * On failure: Returns rejected promise with error message and displays an error toast.
+ */
 export const signupUserThunk = createAsyncThunk(
   "auth/signup",
   async (userData, { rejectWithValue }) => {
@@ -32,6 +42,10 @@ export const signupUserThunk = createAsyncThunk(
   }
 );
 
+/**
+ * Thunk to handle user logout.
+ * Clears the HTTP-only cookie on the server and displays a success toast.
+ */
 export const logoutUserThunk = createAsyncThunk(
   "auth/logout",
   async (_, { rejectWithValue }) => {
@@ -47,6 +61,11 @@ export const logoutUserThunk = createAsyncThunk(
   }
 );
 
+/**
+ * Thunk to verify user session on initial app load.
+ * Silent failure (no toast) if the user is simply not logged in.
+ * Helps persist authentication state across page reloads.
+ */
 export const checkAuthThunk = createAsyncThunk(
   "auth/checkAuth",
   async (_, { rejectWithValue }) => {
@@ -55,6 +74,25 @@ export const checkAuthThunk = createAsyncThunk(
       return data.data; // Should return { user }
     } catch (error) {
       return rejectWithValue("Not authenticated");
+
+    }
+  }
+);
+
+/**
+ * Thunk to fetch all other available users for chat contacts.
+ * Typically dispatched after a successful login or initial auth check.
+ */
+export const getOtherUsersThunk = createAsyncThunk(
+  "auth/getOtherUsers",
+  async (_, { rejectWithValue }) => {
+    try {
+      const data = await authApi.getOtherUsers();
+      return data.data; // Should return the array of other users
+    } catch (error) {
+      const errorMsg = error.response?.data?.message || error.message || "Failed to fetch users";
+      toast.error(errorMsg);
+      return rejectWithValue(errorMsg);
     }
   }
 );

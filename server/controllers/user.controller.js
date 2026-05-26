@@ -102,6 +102,7 @@ export const logout = asyncHandler(async (req, res, next) => {
 // GetOtherUsers
 export const getOtherUsers = asyncHandler(async (req, res, next) => {
   const loggedInUserId = req.user._id;
+  console.log(loggedInUserId);
 
   // Find all users except the currently logged-in user
   const otherUsers = await User.find({ _id: { $ne: loggedInUserId } }).select(

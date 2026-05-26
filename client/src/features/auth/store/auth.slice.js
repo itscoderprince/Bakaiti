@@ -1,22 +1,49 @@
 import { createSlice } from "@reduxjs/toolkit";
-import { loginUserThunk, signupUserThunk, logoutUserThunk, checkAuthThunk } from "./auth.thunks.js";
+import { loginUserThunk, signupUserThunk, logoutUserThunk, checkAuthThunk, getOtherUsersThunk } from "./auth.thunks.js";
 
+/**
+ * Initial state configuration for the authentication slice.
+ * @property {Object|null} user - The currently authenticated user's profile data.
+ * @property {Array} otherUsers - List of other registered users (contacts).
+ * @property {boolean} isAuthenticated - Flag indicating if a valid session exists.
+ * @property {boolean} isLoading - Flag for tracking generic API request loading states.
+ * @property {boolean} isCheckingAuth - Flag specifically for the initial session hydration check.
+ * @property {string|null} error - Stores any error messages from failed thunk operations.
+ */
 const initialState = {
   user: null,
+  otherUsers: [],
   isAuthenticated: false,
   isLoading: false,
   isCheckingAuth: true,
   error: null,
 };
 
+/**
+ * Authentication Slice
+ * Manages global state for user sessions, profile data, and contact lists.
+ */
 const authSlice = createSlice({
   name: "auth",
   initialState,
   reducers: {
+    /**
+     * Synchronous logout fallback.
+     * Use logoutUserThunk for standard flow to ensure backend cookies are cleared.
+     */
     logoutUser: (state) => {
       state.user = null;
+      state.otherUsers = [];
       state.isAuthenticated = false;
       state.error = null;
+    },
+    // Real-time listener updates lastSeen timestamp directly in global otherUsers contacts array
+    updateUserPresence: (state, action) => {
+      const { userId, lastSeen } = action.payload;
+      const contact = state.otherUsers.find((u) => u._id === userId);
+      if (contact) {
+        contact.lastSeen = lastSeen;
+      }
     },
   },
   extraReducers: (builder) => {
@@ -59,6 +86,7 @@ const authSlice = createSlice({
         state.isLoading = false;
         state.isAuthenticated = false;
         state.user = null;
+        state.otherUsers = [];
       })
       .addCase(logoutUserThunk.rejected, (state, action) => {
         state.isLoading = false;
@@ -79,9 +107,23 @@ const authSlice = createSlice({
         state.isCheckingAuth = false;
         state.isAuthenticated = false;
         state.user = null;
+        state.otherUsers = [];
+      })
+
+      // For Get Other Users
+      .addCase(getOtherUsersThunk.pending, (state) => {
+        state.isLoading = true;
+      })
+      .addCase(getOtherUsersThunk.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.otherUsers = action.payload; // Payload should be the array of users
+      })
+      .addCase(getOtherUsersThunk.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload;
       });
   },
 });
 
-export const { logoutUser } = authSlice.actions;
+export const { logoutUser, updateUserPresence } = authSlice.actions;
 export default authSlice.reducer;

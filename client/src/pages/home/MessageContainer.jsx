@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef, useMemo } from "react";
+import { useSelector } from "react-redux";
 import { Input } from "@/components/ui/input";
 import { IconButton } from "@/components/ui/button";
-import { SidebarTrigger } from "@/components/ui/sidebar";
+import { getSocket } from "../../features/shocket/store/shocket.slice.js";
+import EmojiPicker from "emoji-picker-react";
 import {
   Search,
   Phone,
@@ -11,15 +13,54 @@ import {
   Smile,
   MoreVertical,
   X,
+  ArrowLeft,
 } from "lucide-react";
 
-const MessageContainer = ({ contact, messages, onSendMessage }) => {
+/**
+ * Formats user's updatedAt timestamp into a highly polished last seen string.
+ */
+const getLastSeenText = (timestamp) => {
+  if (!timestamp) return "Offline";
+  try {
+    const date = new Date(timestamp);
+    const options = { month: 'short', day: 'numeric' };
+    const timeOptions = { hour: '2-digit', minute: '2-digit' };
+    
+    // Check if it's today
+    const today = new Date();
+    if (date.toDateString() === today.toDateString()) {
+      return `last seen today at ${date.toLocaleTimeString([], timeOptions)}`;
+    }
+    
+    // Check if it's yesterday
+    const yesterday = new Date();
+    yesterday.setDate(today.getDate() - 1);
+    if (date.toDateString() === yesterday.toDateString()) {
+      return `last seen yesterday at ${date.toLocaleTimeString([], timeOptions)}`;
+    }
+
+    return `last seen ${date.toLocaleDateString([], options)} at ${date.toLocaleTimeString([], timeOptions)}`;
+  } catch (err) {
+    return "Offline";
+  }
+};
+
+const MessageContainer = ({ contact, messages = [], onSendMessage, isLoading, onBack }) => {
+  const { user: myUser } = useSelector((state) => state.auth);
+  const { onlineUsers, typingUsers } = useSelector((state) => state.shocket);
   const [inputText, setInputText] = useState("");
+  const isOnline = onlineUsers?.includes(contact?._id);
+  const isTyping = !!typingUsers?.[contact?._id];
   const [showSearch, setShowSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const messagesEndRef = useRef(null);
+  const emojiPickerRef = useRef(null);
 
-  // Auto scroll to bottom when messages or contact changes
+  const typingTimeoutRef = useRef(null);
+  const [isLocalTyping, setIsLocalTyping] = useState(false);
+
+  // Auto scroll to bottom when messages or typing status changes
   const scrollToBottom = () => {
     if (!showSearch) {
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -28,26 +69,84 @@ const MessageContainer = ({ contact, messages, onSendMessage }) => {
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages, contact?.typing]);
+  }, [messages, isTyping]);
+
+  // Close emoji picker when user clicks anywhere outside it
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (emojiPickerRef.current && !emojiPickerRef.current.contains(e.target)) {
+        setShowEmojiPicker(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   // Reset search state when switching contacts
   useEffect(() => {
     setShowSearch(false);
     setSearchQuery("");
-  }, [contact?.id]);
+  }, [contact?._id]);
+
+  // Stop typing indicator on contact change or unmount
+  useEffect(() => {
+    return () => {
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+      const socket = getSocket();
+      if (socket && contact?._id && isLocalTyping) {
+        socket.emit("stopTyping", contact._id);
+        setIsLocalTyping(false);
+      }
+    };
+  }, [contact?._id, isLocalTyping]);
+
+  const handleInputChange = (e) => {
+    setInputText(e.target.value);
+
+    const socket = getSocket();
+    if (!socket || !contact?._id) return;
+
+    if (!isLocalTyping) {
+      setIsLocalTyping(true);
+      socket.emit("typing", contact._id);
+    }
+
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+
+    typingTimeoutRef.current = setTimeout(() => {
+      socket.emit("stopTyping", contact._id);
+      setIsLocalTyping(false);
+    }, 2000);
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!inputText.trim()) return;
+
+    // Stop typing indicator on send
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+    const socket = getSocket();
+    if (socket && contact?._id && isLocalTyping) {
+      socket.emit("stopTyping", contact._id);
+      setIsLocalTyping(false);
+    }
+
     onSendMessage(inputText);
     setInputText("");
   };
 
   // Filter messages based on search query
   const filteredMessages = useMemo(() => {
+    if (!Array.isArray(messages)) return [];
     if (!searchQuery.trim()) return messages;
     return messages.filter((m) =>
-      m.text.toLowerCase().includes(searchQuery.toLowerCase()),
+      m.message?.toLowerCase().includes(searchQuery.toLowerCase()),
     );
   }, [messages, searchQuery]);
 
@@ -69,21 +168,40 @@ const MessageContainer = ({ contact, messages, onSendMessage }) => {
   }
 
   return (
-    <div className="flex flex-1 flex-col h-full bg-background overflow-hidden relative">
+    <div className={`flex flex-1 flex-col h-full bg-background overflow-hidden relative ${
+      contact ? "flex" : "hidden md:flex"
+    }`}>
       {/* Chat Header (No bottom border as requested) */}
       <header className="flex flex-col shrink-0 bg-background z-10">
-        <div className="flex h-16 items-center justify-between px-4 md:px-6">
+        <div className="flex h-16 items-center justify-between px-3 md:px-6">
           <div className="flex items-center gap-3 min-w-0">
-            <SidebarTrigger className="md:hidden -ml-1 mr-1 text-muted-foreground" />
+            {onBack && (
+              <button
+                onClick={onBack}
+                className="md:hidden p-1 mr-1 rounded-full hover:bg-muted text-muted-foreground transition-colors shrink-0"
+                aria-label="Back to contacts"
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </button>
+            )}
 
             {/* Contact Details */}
             <div className="relative shrink-0">
-              <div
-                className={`flex h-9 w-9 items-center justify-center rounded-full text-white text-sm font-semibold shadow-sm ${contact.avatarBg}`}
-              >
-                {contact.avatarText}
-              </div>
-              {contact.status === "online" && (
+              {contact.profilePic ? (
+                <img
+                  src={contact.profilePic}
+                  alt={contact.name}
+                  className="flex h-9 w-9 object-cover items-center justify-center rounded-full shadow-sm"
+                />
+              ) : (
+                <div className="flex h-9 w-9 items-center justify-center rounded-full text-white text-sm font-semibold shadow-sm bg-indigo-500">
+                  {contact.name
+                    ? contact.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
+                    : 'U'}
+                </div>
+              )}
+              {/* Online presence status indicator dot */}
+              {isOnline && (
                 <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-background bg-emerald-500" />
               )}
             </div>
@@ -93,12 +211,12 @@ const MessageContainer = ({ contact, messages, onSendMessage }) => {
                 {contact.name}
               </span>
               <span className="text-[11px] text-muted-foreground leading-tight truncate">
-                {contact.typing ? (
-                  <span className="text-emerald-500 font-medium">
+                {isTyping ? (
+                  <span className="text-emerald-500 font-medium animate-pulse">
                     typing...
                   </span>
                 ) : (
-                  contact.lastSeen
+                  isOnline ? "Online" : getLastSeenText(contact?.lastSeen)
                 )}
               </span>
             </div>
@@ -135,7 +253,7 @@ const MessageContainer = ({ contact, messages, onSendMessage }) => {
 
         {/* WhatsApp-style In-chat Search Bar */}
         {showSearch && (
-          <div className="px-4 pb-3 pt-1 animate-in slide-in-from-top-2">
+          <div className="px-2 md:px-4 pb-3 pt-1 animate-in slide-in-from-top-2">
             <div className="relative flex items-center">
               <Search className="absolute left-3 h-4 w-4 text-muted-foreground" />
               <Input
@@ -159,21 +277,31 @@ const MessageContainer = ({ contact, messages, onSendMessage }) => {
       </header>
 
       {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 bg-[#efeae2] dark:bg-[#0b141a] scrollbar-thin">
-        {filteredMessages.length === 0 && searchQuery ? (
+      <div className="flex-1 overflow-y-auto px-2 py-4 md:p-6 space-y-4 bg-[#efeae2] dark:bg-[#0b141a] scrollbar-thin">
+        {isLoading ? (
+          <div className="flex justify-center mt-10">
+            <span className="text-muted-foreground text-sm">Loading messages...</span>
+          </div>
+        ) : filteredMessages.length === 0 && searchQuery ? (
           <div className="text-center text-muted-foreground text-sm mt-10">
             No messages found for "{searchQuery}"
           </div>
         ) : (
-          filteredMessages.map((message) => {
-            const isMe = message.sender === "me";
+          filteredMessages.map((messageObj) => {
+            const isMe = messageObj.senderId === myUser?._id;
+            
+            // Format time
+            const timeString = messageObj.createdAt 
+              ? new Date(messageObj.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+              : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
             return (
               <div
-                key={message.id}
+                key={messageObj._id}
                 className={`flex w-full ${isMe ? "justify-end" : "justify-start"}`}
               >
                 <div
-                  className={`flex flex-col max-w-[70%] space-y-1 ${isMe ? "items-end" : "items-start"}`}
+                  className={`flex flex-col max-w-[85%] md:max-w-[70%] space-y-1 ${isMe ? "items-end" : "items-start"}`}
                 >
                   <div
                     className={`rounded-xl px-3 py-2 text-[15px] shadow-sm relative ${
@@ -183,11 +311,11 @@ const MessageContainer = ({ contact, messages, onSendMessage }) => {
                     }`}
                   >
                     <p className="whitespace-pre-wrap wrap-break-words leading-snug">
-                      {message.text}
+                      {messageObj.message}
                     </p>
                     <div className="flex justify-end mt-1">
                       <span className="text-[10px] text-muted-foreground/80 opacity-70">
-                        {message.timestamp}
+                        {timeString}
                       </span>
                     </div>
                   </div>
@@ -198,7 +326,7 @@ const MessageContainer = ({ contact, messages, onSendMessage }) => {
         )}
 
         {/* Typing Animation Bubble */}
-        {contact.typing && !searchQuery && (
+        {isTyping && !searchQuery && (
           <div className="flex w-full justify-start animate-fade-in">
             <div className="flex flex-col items-start space-y-1">
               <div className="rounded-xl rounded-tl-none px-4 py-3 bg-white dark:bg-[#202c33] shadow-sm flex items-center gap-1">
@@ -222,15 +350,39 @@ const MessageContainer = ({ contact, messages, onSendMessage }) => {
       </div>
 
       {/* Input Area */}
-      <footer className="p-3 bg-[#f0f2f5] dark:bg-[#202c33] shrink-0">
+      <footer className="relative p-2 md:p-3 bg-[#f0f2f5] dark:bg-[#202c33] shrink-0">
+ 
+        {/* Emoji Picker — floats above the input row, anchored to the left */}
+        {showEmojiPicker && (
+          <div
+            ref={emojiPickerRef}
+            className="absolute bottom-full left-2 right-2 sm:left-3 sm:right-auto mb-2 z-50 shadow-2xl rounded-2xl overflow-hidden w-[calc(100vw-1.5rem)] sm:w-[320px]"
+          >
+            <EmojiPicker
+              onEmojiClick={(emojiData) => {
+                // Append the selected emoji character to the current input text
+                setInputText((prev) => prev + emojiData.emoji);
+              }}
+              searchDisabled={false}
+              skinTonesDisabled
+              height={380}
+              width="100%"
+            />
+          </div>
+        )}
+ 
         <form
           onSubmit={handleSubmit}
-          className="flex items-center gap-2 max-w-5xl mx-auto"
+          className="flex items-center gap-1.5 md:gap-2 w-full max-w-5xl mx-auto"
         >
+          {/* Toggle emoji picker open/closed */}
           <IconButton
             type="button"
             icon={Smile}
-            className="h-10 w-10 shrink-0 rounded-full"
+            onClick={() => setShowEmojiPicker((prev) => !prev)}
+            className={`h-10 w-10 shrink-0 rounded-full transition-colors ${
+              showEmojiPicker ? "text-emerald-500 bg-emerald-500/10" : ""
+            }`}
             iconClassName="h-6 w-6"
           />
 
@@ -243,7 +395,7 @@ const MessageContainer = ({ contact, messages, onSendMessage }) => {
 
           <Input
             value={inputText}
-            onChange={(e) => setInputText(e.target.value)}
+            onChange={handleInputChange}
             placeholder="Type a message"
             className="flex-1 bg-white dark:bg-[#2a3942] border-transparent rounded-full h-10 px-4 focus-visible:ring-1 focus-visible:ring-emerald-500 shadow-sm"
           />

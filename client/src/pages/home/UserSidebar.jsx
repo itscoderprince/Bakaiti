@@ -29,13 +29,12 @@ import {
   LogOut,
   Moon,
   Sun,
-  MessageSquare,
   MoreVertical,
   User as UserIcon,
 } from "lucide-react";
+import { useSelector } from "react-redux";
 
 const UserSidebar = ({
-  contacts,
   activeContactId,
   setActiveContactId,
   searchQuery,
@@ -45,6 +44,23 @@ const UserSidebar = ({
 }) => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
+  const { otherUsers, user: currentUser } = useSelector((store) => store.auth);
+  const { onlineUsers } = useSelector((store) => store.shocket);
+  const { lastMessageTimes } = useSelector((store) => store.messages);
+
+  // 1. Filter contacts based on the search query input
+  const filteredUsers = otherUsers?.filter((user) => 
+    user.fullname?.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    user.username?.toLowerCase().includes(searchQuery.toLowerCase())
+  ) || [];
+
+  // 2. Sort filtered contacts so that users with the most recent message exchange appear at the top.
+  // Fallback to their creation date (registration date) so list order is consistent.
+  const sortedUsers = [...filteredUsers].sort((a, b) => {
+    const timeA = lastMessageTimes[a._id] || a.createdAt || 0;
+    const timeB = lastMessageTimes[b._id] || b.createdAt || 0;
+    return new Date(timeB) - new Date(timeA);
+  });
 
   const handleLogout = async () => {
     try {
@@ -57,11 +73,13 @@ const UserSidebar = ({
 
   return (
     <Sidebar
-      className="border-r border-sidebar-border bg-sidebar"
+      className={`border-r border-sidebar-border bg-sidebar transition-all duration-200 !w-full md:!w-[22rem] ${
+        activeContactId ? "hidden md:flex" : "flex"
+      }`}
       collapsible="none"
     >
       {/* Sidebar Header */}
-      <SidebarHeader className="p-4">
+      <SidebarHeader className="p-3 md:p-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg shadow-sm overflow-hidden bg-transparent">
@@ -97,17 +115,23 @@ const UserSidebar = ({
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {contacts.length === 0 ? (
+              {sortedUsers.length === 0 ? (
                 <div className="px-4 py-8 text-center text-sm text-muted-foreground">
                   No contacts found
                 </div>
               ) : (
-                contacts.map((contact) => {
-                  const isActive = contact.id === activeContactId;
+                sortedUsers.map((user) => {
+                  const isActive = user._id === activeContactId;
+                  
+                  // Extract initials for avatar
+                  const initials = user.fullname
+                    ? user.fullname.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
+                    : user.username?.substring(0, 2).toUpperCase() || 'U';
+
                   return (
-                    <SidebarMenuItem key={contact.id} className="mb-0.5">
+                    <SidebarMenuItem key={user._id} className="mb-0.5">
                       <SidebarMenuButton
-                        onClick={() => setActiveContactId(contact.id)}
+                        onClick={() => setActiveContactId(user._id)}
                         isActive={isActive}
                         className={`w-full flex items-center justify-between p-3 h-14 rounded-lg transition-all duration-200 border border-transparent ${
                           isActive
@@ -116,14 +140,21 @@ const UserSidebar = ({
                         }`}
                       >
                         <div className="flex items-center gap-3 w-full min-w-0">
-                          {/* Avatar with Status Indicator */}
+                          {/* Avatar with Profile Pic or Initials */}
                           <div className="relative shrink-0">
-                            <div
-                              className={`flex h-9 w-9 items-center justify-center rounded-full text-white text-sm font-semibold shadow-sm ${contact.avatarBg}`}
-                            >
-                              {contact.avatarText}
-                            </div>
-                            {contact.status === "online" && (
+                            {user.profilePic ? (
+                              <img
+                                src={user.profilePic}
+                                alt={user.fullname}
+                                className="flex h-9 w-9 object-cover items-center justify-center rounded-full shadow-sm"
+                              />
+                            ) : (
+                              <div className="flex h-9 w-9 items-center justify-center rounded-full text-white text-sm font-semibold shadow-sm bg-indigo-500">
+                                {initials}
+                              </div>
+                            )}
+                            {/* Online presence status indicator */}
+                            {onlineUsers?.includes(user._id) && (
                               <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-sidebar bg-emerald-500 shadow-sm" />
                             )}
                           </div>
@@ -132,27 +163,14 @@ const UserSidebar = ({
                           <div className="flex flex-col text-left min-w-0 w-full">
                             <div className="flex items-center justify-between">
                               <span className="font-medium text-sm truncate">
-                                {contact.name}
+                                {user.fullname}
                               </span>
                             </div>
                             <span className="text-xs text-muted-foreground truncate mt-0.5">
-                              {contact.typing ? (
-                                <span className="text-emerald-500 font-medium animate-pulse">
-                                  typing...
-                                </span>
-                              ) : (
-                                `@${contact.username}`
-                              )}
+                              @{user.username}
                             </span>
                           </div>
                         </div>
-
-                        {/* Unread Message Badge */}
-                        {contact.unread > 0 && !isActive && (
-                          <div className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[10px] font-bold text-primary-foreground shadow-sm">
-                            {contact.unread}
-                          </div>
-                        )}
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   );
@@ -176,17 +194,28 @@ const UserSidebar = ({
               >
                 <div className="flex items-center gap-2.5 min-w-0">
                   <div className="relative shrink-0">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-800 text-white text-xs font-semibold">
-                      AC
-                    </div>
+                    {currentUser?.profilePic ? (
+                      <img
+                        src={currentUser.profilePic}
+                        alt={currentUser.fullname}
+                        className="flex h-8 w-8 object-cover items-center justify-center rounded-full shadow-sm"
+                      />
+                    ) : (
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-800 text-white text-xs font-semibold">
+                        {currentUser?.fullname
+                          ? currentUser.fullname.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
+                          : currentUser?.username?.substring(0, 2).toUpperCase() || 'U'}
+                      </div>
+                    )}
+                    {/* Assume the current user is always online */}
                     <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-sidebar bg-emerald-500" />
                   </div>
                   <div className="flex flex-col text-left min-w-0">
                     <span className="font-medium text-xs truncate">
-                      Alex Carter
+                      {currentUser?.fullname || 'User'}
                     </span>
                     <span className="text-[10px] text-muted-foreground truncate">
-                      alex_carter
+                      @{currentUser?.username || 'user'}
                     </span>
                   </div>
                 </div>

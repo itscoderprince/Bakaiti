@@ -6,11 +6,10 @@ import messageRoute from "./routes/message.route.js";
 import { Connection } from "./db/Connection.js";
 import { errorHandler } from "./middlewares/error.middleware.js";
 import { config } from "./config/env.js";
-
-const app = express();
+import { app, server } from "./shocket/shocket.js";
 
 const corsOptions = {
-  origin: "http://localhost:5173",
+  origin: config.CLIENT_URL.replace(/\/$/, ""),
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
@@ -33,6 +32,6 @@ app.use("/api/v1/message", messageRoute);
 // Global Error Handler Middleware
 app.use(errorHandler);
 
-app.listen(port, () => {
+server.listen(port, () => {
   console.log(`Server is running on port:${port}`);
 });

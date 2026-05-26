@@ -2,6 +2,7 @@ import asyncHandler from "../utils/asyncHandler.js";
 import ApiResponse from "../utils/ApiResponse.js";
 import Conversation from "../models/conversation.model.js";
 import Message from "../models/message.model.js";
+import { getReceiverSocketId, io } from "../shocket/shocket.js";
 
 export const sendMessage = asyncHandler(async (req, res, next) => {
   const senderId = req.user._id;
@@ -32,7 +33,12 @@ export const sendMessage = asyncHandler(async (req, res, next) => {
   // Save both in parallel
   await Promise.all([conversation.save(), newMessage.save()]);
 
-  // TODO: SOCKET.IO implementation for real-time messaging
+  // SOCKET.IO implementation for real-time messaging
+  const receiverSocketId = getReceiverSocketId(receiverId);
+  if (receiverSocketId) {
+    // io.to().emit() is used to send events to a specific client
+    io.to(receiverSocketId).emit("newMessage", newMessage);
+  }
 
   res
     .status(201)
