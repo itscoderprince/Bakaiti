@@ -257,6 +257,9 @@ const MessageContainer = ({
   onSendMessage,
   isLoading,
   onBack,
+  isLoadingMore,
+  hasMore,
+  onLoadMore,
 }) => {
   const { user: myUser } = useSelector((state) => state.auth);
   const { onlineUsers, typingUsers } = useSelector((state) => state.shocket);
@@ -274,6 +277,9 @@ const MessageContainer = ({
   // showEmojiPicker state removed — emoji picker package uninstalled
   const lastContactIdRef = useRef(null);
   const shouldScrollInstantRef = useRef(false);
+  const scrollAreaRef = useRef(null);
+  const previousScrollHeightRef = useRef(0);
+  const isPrependRef = useRef(false);
 
   // MIN-1: Sync showSearch to a ref so scrollToBottom can always read the
   // latest value without needing it as a useCallback dependency.
@@ -306,7 +312,34 @@ const MessageContainer = ({
   }, []);
 
   useEffect(() => {
+    const viewport = scrollAreaRef.current?.querySelector('[data-slot="scroll-area-viewport"]');
+    if (!viewport) return;
+
+    const handleScroll = () => {
+      if (viewport.scrollTop < 50 && hasMore && !isLoadingMore && !isLoading) {
+        previousScrollHeightRef.current = viewport.scrollHeight;
+        isPrependRef.current = true;
+        onLoadMore();
+      }
+    };
+
+    viewport.addEventListener("scroll", handleScroll);
+    return () => {
+      viewport.removeEventListener("scroll", handleScroll);
+    };
+  }, [hasMore, isLoadingMore, isLoading, onLoadMore]);
+
+  useEffect(() => {
     if (isLoading) return;
+
+    const viewport = scrollAreaRef.current?.querySelector('[data-slot="scroll-area-viewport"]');
+    if (viewport && isPrependRef.current) {
+      const heightDifference = viewport.scrollHeight - previousScrollHeightRef.current;
+      viewport.scrollTop = heightDifference;
+      isPrependRef.current = false;
+      return;
+    }
+
     if (shouldScrollInstantRef.current) {
       scrollToBottom("auto");
       shouldScrollInstantRef.current = false;
@@ -623,6 +656,7 @@ const MessageContainer = ({
 
       {/* Messages Area — MED-2: wallpaperClass is memoized (no inline find()) */}
       <ScrollArea
+        ref={scrollAreaRef}
         className={`flex-1 min-h-0 transition-colors duration-300 ${wallpaperClass}`}
       >
         <div className="px-3 py-4 md:p-6 space-y-4">
@@ -635,9 +669,14 @@ const MessageContainer = ({
               No messages found for &quot;{searchQuery}&quot;
             </div>
           ) : (
-            // CRIT-2: Pre-memoized list — typing in the input no longer causes
-            // all message bubbles to re-render
-            renderedMessages
+            <>
+              {isLoadingMore && (
+                <div className="flex justify-center py-2 animate-in fade-in duration-200">
+                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                </div>
+              )}
+              {renderedMessages}
+            </>
           )}
 
           {/* Typing Animation Bubble */}

@@ -9,8 +9,12 @@ export const messageApi = {
    * @param {string} userId - The ID of the contact user to get messages for.
    * @returns {Promise<Object>} The server response containing an array of messages.
    */
-  getMessages: async (userId) => {
-    const response = await axiosInstance.get(`/message/${userId}`);
+  getMessages: async (userId, before, limit = 30) => {
+    let url = `/message/${userId}?limit=${limit}`;
+    if (before) {
+      url += `&before=${encodeURIComponent(before)}`;
+    }
+    const response = await axiosInstance.get(url);
     return response.data;
   },
 

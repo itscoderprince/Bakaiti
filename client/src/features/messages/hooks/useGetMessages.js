@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { getMessagesThunk } from "../store/message.thunks.js";
 
@@ -8,7 +8,7 @@ import { getMessagesThunk } from "../store/message.thunks.js";
  */
 export const useGetMessages = (contactId) => {
   const dispatch = useDispatch();
-  const { messages, isMessagesLoading, error } = useSelector(
+  const { messages, isMessagesLoading, isLoadingMore, hasMore, error } = useSelector(
     (state) => state.messages,
   );
 
@@ -21,8 +21,20 @@ export const useGetMessages = (contactId) => {
     //   1. cleanup: clearMessages() → messages=[], isLoading still false → flash
     //   2. new effect: pending → isLoading=true
     // With the new pattern both happen atomically in the same dispatch cycle.
-    dispatch(getMessagesThunk(contactId));
+    dispatch(getMessagesThunk({ userId: contactId }));
   }, [dispatch, contactId]);
 
-  return { messages, isMessagesLoading, error };
+  const loadMoreMessages = useCallback(() => {
+    if (!contactId || isMessagesLoading || isLoadingMore || !hasMore) return;
+    const oldestMessage = messages[0];
+    if (!oldestMessage) return;
+    dispatch(
+      getMessagesThunk({
+        userId: contactId,
+        before: oldestMessage.createdAt,
+      })
+    );
+  }, [dispatch, contactId, messages, isMessagesLoading, isLoadingMore, hasMore]);
+
+  return { messages, isMessagesLoading, isLoadingMore, hasMore, error, loadMoreMessages };
 };

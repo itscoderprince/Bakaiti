@@ -20,7 +20,13 @@ const Home = () => {
   const [theme, setTheme] = useState("dark");
 
   // Fetch messages using our custom hook
-  const { messages, isMessagesLoading } = useGetMessages(activeContactId);
+  const {
+    messages,
+    isMessagesLoading,
+    isLoadingMore,
+    hasMore,
+    loadMoreMessages,
+  } = useGetMessages(activeContactId);
   const { sendMessage } = useSendMessage();
   
   // Listen for real-time messages via socket.io
@@ -90,6 +96,9 @@ const Home = () => {
           onSendMessage={handleSendMessage}
           isLoading={isMessagesLoading}
           onBack={handleBack}
+          isLoadingMore={isLoadingMore}
+          hasMore={hasMore}
+          onLoadMore={loadMoreMessages}
         />
       </div>
     </SidebarProvider>

@@ -58,6 +58,20 @@ export const sendMessage = asyncHandler(async (req, res, next) => {
 export const getMessages = asyncHandler(async (req, res, next) => {
   const myId = req.user._id;
   const userToChatId = req.params.userId;
+  const limit = parseInt(req.query.limit) || 30;
+  const before = req.query.before;
+
+  // Build query dynamically for pagination
+  const messageQuery = {
+    $or: [
+      { senderId: myId, receiverId: userToChatId },
+      { senderId: userToChatId, receiverId: myId },
+    ],
+  };
+
+  if (before) {
+    messageQuery.createdAt = { $lt: new Date(before) };
+  }
 
   // CRIT-6: Run the status-update write and the message fetch concurrently.
   // Previously the write blocked the fetch, adding unnecessary latency to every
@@ -67,15 +81,12 @@ export const getMessages = asyncHandler(async (req, res, next) => {
   // Conversation.messages[] is an unbounded ObjectId array — with 10k messages
   // it becomes a 120 KB document that must be loaded just to be re-populated.
   // Querying Message directly with a compound index is faster and avoids bloat.
-  const [messages] = await Promise.all([
-    Message.find({
-      $or: [
-        { senderId: myId, receiverId: userToChatId },
-        { senderId: userToChatId, receiverId: myId },
-      ],
-    })
+  // We fetch limit + 1 messages to determine hasMore.
+  const [rawMessages] = await Promise.all([
+    Message.find(messageQuery)
       .select("message senderId receiverId createdAt status") // MIN-4: receiverId included
-      .sort({ createdAt: 1 })
+      .sort({ createdAt: -1 })
+      .limit(limit + 1)
       .lean(),
 
     // Mark received messages as read (concurrently with the fetch above)
@@ -85,6 +96,12 @@ export const getMessages = asyncHandler(async (req, res, next) => {
     ),
   ]);
 
+  const hasMore = rawMessages.length > limit;
+  const messages = hasMore ? rawMessages.slice(0, limit) : rawMessages;
+
+  // Reverse to restore chronological order (oldest first)
+  messages.reverse();
+
   // Notify the sender that their messages have been read
   const senderSocketId = getReceiverSocketId(userToChatId);
   if (senderSocketId) {
@@ -93,5 +110,11 @@ export const getMessages = asyncHandler(async (req, res, next) => {
 
   res
     .status(200)
-    .json(new ApiResponse(200, messages, "Messages retrieved successfully"));
+    .json(
+      new ApiResponse(
+        200,
+        { messages, hasMore },
+        "Messages retrieved successfully"
+      )
+    );
 });

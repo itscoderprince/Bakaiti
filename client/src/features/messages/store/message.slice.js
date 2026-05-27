@@ -21,6 +21,8 @@ const loadLastMessageTimes = () => {
 const initialState = {
   messages: [],
   isMessagesLoading: false,
+  isLoadingMore: false,
+  hasMore: false,
   isSendingMessage: false,
   error: null,
   lastMessageTimes: loadLastMessageTimes(),
@@ -73,21 +75,37 @@ const messageSlice = createSlice({
   extraReducers: (builder) => {
     builder
       // getMessages
-      .addCase(getMessagesThunk.pending, (state) => {
-        // MED-5: Clear previous conversation's messages right here, at the start
-        // of a new fetch, instead of in a useEffect cleanup function.
-        // This eliminates the brief empty-flash caused by clearMessages() firing
-        // before isMessagesLoading becomes true.
-        state.messages = [];
-        state.isMessagesLoading = true;
+      .addCase(getMessagesThunk.pending, (state, action) => {
+        const isLoadMore = action.meta.arg?.before;
+        if (isLoadMore) {
+          state.isLoadingMore = true;
+        } else {
+          // MED-5: Clear previous conversation's messages right here, at the start
+          // of a new fetch, instead of in a useEffect cleanup function.
+          // This eliminates the brief empty-flash caused by clearMessages() firing
+          // before isMessagesLoading becomes true.
+          state.messages = [];
+          state.isMessagesLoading = true;
+          state.hasMore = false;
+        }
         state.error = null;
       })
       .addCase(getMessagesThunk.fulfilled, (state, action) => {
         state.isMessagesLoading = false;
-        state.messages = action.payload || [];
+        state.isLoadingMore = false;
+        if (action.payload) {
+          const { messages, hasMore, isLoadMore } = action.payload;
+          if (isLoadMore) {
+            state.messages = [...messages, ...state.messages];
+          } else {
+            state.messages = messages;
+          }
+          state.hasMore = hasMore;
+        }
       })
       .addCase(getMessagesThunk.rejected, (state, action) => {
         state.isMessagesLoading = false;
+        state.isLoadingMore = false;
         state.error = action.payload;
       })
 

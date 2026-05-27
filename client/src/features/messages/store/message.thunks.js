@@ -7,11 +7,15 @@ import toast from "react-hot-toast";
  */
 export const getMessagesThunk = createAsyncThunk(
   "messages/getMessages",
-  async (userId, { rejectWithValue }) => {
+  async ({ userId, before, limit }, { rejectWithValue }) => {
     try {
-      const response = await messageApi.getMessages(userId);
-      // The backend returns an array if empty, or a conversation object containing .messages
-      return Array.isArray(response.data) ? response.data : response.data.messages || [];
+      const response = await messageApi.getMessages(userId, before, limit);
+      // The backend now returns { messages, hasMore }
+      return {
+        messages: response.data?.messages || [],
+        hasMore: response.data?.hasMore ?? false,
+        isLoadMore: !!before,
+      };
     } catch (error) {
       const errorMsg = error.response?.data?.message || error.message || "Failed to fetch messages";
       toast.error(errorMsg);
