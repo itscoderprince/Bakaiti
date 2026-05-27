@@ -14,8 +14,12 @@ import PublicRoute from "./components/PublicRoute.jsx";
 const Home = lazy(() => import("./pages/home/Home.jsx"));
 const Login = lazy(() => import("./features/auth/components/Login.jsx"));
 const Signup = lazy(() => import("./features/auth/components/Signup.jsx"));
-const ForgotPassword = lazy(() => import("./features/auth/components/ForgotPassword.jsx"));
-const ResetPassword = lazy(() => import("./features/auth/components/ResetPassword.jsx"));
+const ForgotPassword = lazy(
+  () => import("./features/auth/components/ForgotPassword.jsx"),
+);
+const ResetPassword = lazy(
+  () => import("./features/auth/components/ResetPassword.jsx"),
+);
 
 const router = createBrowserRouter([
   {
@@ -25,11 +29,11 @@ const router = createBrowserRouter([
       {
         index: true,
         element: (
-          <ProtectedRoute>
-            <Suspense fallback={null}>
-              <Home />
-            </Suspense>
-          </ProtectedRoute>
+          // <ProtectedRoute>
+          <Suspense fallback={null}>
+            <Home />
+          </Suspense>
+          // </ProtectedRoute>
         ),
       },
       {

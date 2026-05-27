@@ -3,7 +3,6 @@ import { useDispatch, useSelector } from "react-redux";
 import { checkAuthThunk } from "./features/auth/store/auth.thunks.js";
 import { updateUserPresence } from "./features/auth/store/auth.slice.js";
 import { connectSocket, disconnectSocket, setOnlineUsers, getSocket, setTyping } from "./features/shocket/store/shocket.slice.js";
-import { Loader2 } from "lucide-react";
 import { Outlet } from "react-router-dom";
 
 const App = () => {
