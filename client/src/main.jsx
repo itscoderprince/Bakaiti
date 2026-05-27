@@ -26,10 +26,10 @@ const router = createBrowserRouter([
         index: true,
         element: (
           // <ProtectedRoute>
-            <Suspense fallback={null}>
-              <Home />
-            </Suspense>
-          {/* </ProtectedRoute> */}
+          <Suspense fallback={null}>
+            <Home />
+          </Suspense>
+          // </ProtectedRoute>
         ),
       },
       {
