@@ -141,10 +141,15 @@ const UserSidebar = ({
 
                             {/* Contact Text Information */}
                             <div className="flex flex-col text-left min-w-0 w-full">
-                              <div className="flex items-center justify-between">
+                              <div className="flex items-center justify-between gap-2">
                                 <span className="font-semibold text-sm truncate tracking-tight">
                                   {user.fullname}
                                 </span>
+                                {user.unreadCount > 0 && (
+                                  <span className="shrink-0 flex items-center justify-center h-5 min-w-[20px] px-1.5 rounded-full bg-primary text-white text-[10px] font-bold leading-none select-none animate-in scale-in duration-200">
+                                    {user.unreadCount > 99 ? "99+" : user.unreadCount}
+                                  </span>
+                                )}
                               </div>
                               <span className="text-[11px] text-muted-foreground/80 truncate mt-0.5">
                                 @{user.username}

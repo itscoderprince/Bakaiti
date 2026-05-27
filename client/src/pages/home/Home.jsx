@@ -4,6 +4,7 @@ import UserSidebar from "./UserSidebar";
 import MessageContainer from "./MessageContainer";
 import { useDispatch, useSelector } from "react-redux";
 import { getOtherUsersThunk } from "../../features/auth/store/auth.thunks";
+import { resetUnreadCount } from "../../features/auth/store/auth.slice";
 import { useGetMessages } from "../../features/messages/hooks/useGetMessages";
 import { useSendMessage } from "../../features/messages/hooks/useSendMessage";
 import { useListenMessages } from "../../features/messages/hooks/useListenMessages";
@@ -28,6 +29,13 @@ const Home = () => {
   useEffect(() => {
     dispatch(getOtherUsersThunk());
   }, [dispatch]);
+
+  // Reset unread count when switching to a contact
+  useEffect(() => {
+    if (activeContactId) {
+      dispatch(resetUnreadCount({ contactId: activeContactId }));
+    }
+  }, [activeContactId, dispatch]);
 
   const handleSendMessage = useCallback(async (text) => {
     if (!text.trim() || !activeContactId) return;

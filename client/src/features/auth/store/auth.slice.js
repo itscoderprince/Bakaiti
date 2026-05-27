@@ -45,6 +45,22 @@ const authSlice = createSlice({
         contact.lastSeen = lastSeen;
       }
     },
+    // Real-time badge increment for unread messages
+    incrementUnreadCount: (state, action) => {
+      const { contactId } = action.payload;
+      const contact = state.otherUsers.find((u) => u._id === contactId);
+      if (contact) {
+        contact.unreadCount = (contact.unreadCount || 0) + 1;
+      }
+    },
+    // Reset unread badge when chat is active
+    resetUnreadCount: (state, action) => {
+      const { contactId } = action.payload;
+      const contact = state.otherUsers.find((u) => u._id === contactId);
+      if (contact) {
+        contact.unreadCount = 0;
+      }
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -139,5 +155,5 @@ const authSlice = createSlice({
   },
 });
 
-export const { logoutUser, updateUserPresence } = authSlice.actions;
+export const { logoutUser, updateUserPresence, incrementUnreadCount, resetUnreadCount } = authSlice.actions;
 export default authSlice.reducer;

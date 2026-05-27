@@ -2,6 +2,7 @@ import asyncHandler from "../utils/asyncHandler.js";
 import AppError from "../utils/AppError.js";
 import ApiResponse from "../utils/ApiResponse.js";
 import User from "../models/user.model.js";
+import Message from "../models/message.model.js";
 import { generateTokenAndSetCookie } from "../utils/generateToken.js";
 import { config } from "../config/env.js";
 import crypto from "crypto";
@@ -111,10 +112,22 @@ export const getOtherUsers = asyncHandler(async (req, res, next) => {
     .select("-password")
     .lean();
 
+  // For each user, count unread messages they sent to the logged-in user
+  const otherUsersWithUnread = await Promise.all(
+    otherUsers.map(async (u) => {
+      const unreadCount = await Message.countDocuments({
+        senderId: u._id,
+        receiverId: loggedInUserId,
+        status: { $ne: "read" },
+      });
+      return { ...u, unreadCount };
+    })
+  );
+
   res
     .status(200)
     .json(
-      new ApiResponse(200, otherUsers, "Other users retrieved successfully"),
+      new ApiResponse(200, otherUsersWithUnread, "Other users retrieved successfully"),
     );
 });
 

@@ -18,7 +18,19 @@ import {
   MessageSquareCode,
   Check,
   CheckCheck,
+  Palette,
 } from "lucide-react";
+
+const wallpaperOptions = [
+  { id: "default", name: "Default Glow", class: "bg-transparent" },
+  { id: "solid-dark", name: "Charcoal", class: "!bg-zinc-950" },
+  { id: "solid-navy", name: "Navy Blue", class: "!bg-slate-900" },
+  { id: "solid-plum", name: "Deep Plum", class: "!bg-purple-950/60" },
+  { id: "grad-royal", name: "Royal Sky", class: "!bg-gradient-to-b !from-blue-950/40 !via-zinc-950 !to-black" },
+  { id: "grad-emerald", name: "Forest Mint", class: "!bg-gradient-to-b !from-emerald-950/30 !via-neutral-950 !to-black" },
+  { id: "grad-sunset", name: "Sunset Velvet", class: "!bg-gradient-to-b !from-rose-950/30 !via-zinc-950 !to-black" },
+  { id: "grad-ocean", name: "Ocean Breeze", class: "!bg-gradient-to-b !from-cyan-950/30 !via-slate-950 !to-black" },
+];
 
 /**
  * Formats user's updatedAt timestamp into a highly polished last seen string.
@@ -27,15 +39,15 @@ const getLastSeenText = (timestamp) => {
   if (!timestamp) return "Offline";
   try {
     const date = new Date(timestamp);
-    const options = { month: 'short', day: 'numeric' };
-    const timeOptions = { hour: '2-digit', minute: '2-digit' };
-    
+    const options = { month: "short", day: "numeric" };
+    const timeOptions = { hour: "2-digit", minute: "2-digit" };
+
     // Check if it's today
     const today = new Date();
     if (date.toDateString() === today.toDateString()) {
       return `last seen today at ${date.toLocaleTimeString([], timeOptions)}`;
     }
-    
+
     // Check if it's yesterday
     const yesterday = new Date();
     yesterday.setDate(today.getDate() - 1);
@@ -55,21 +67,29 @@ const getLastSeenText = (timestamp) => {
  */
 const getEmojiOnlyCount = (text) => {
   if (!text) return 0;
-  
+
   // Remove spaces, Zero Width Joiners (\u200D), Variation Selectors (\uFE0F), and skin tone modifiers (FITZPATRICK modifiers \uD83C\uDFFB-\uD83C\uDFFF)
-  const emojiStr = text.replace(/[\s\uFE0F\u200D]/g, '').replace(/[\uD83C][\uDFFB-\uDFFF]/g, '');
+  const emojiStr = text
+    .replace(/[\s\uFE0F\u200D]/g, "")
+    .replace(/[\uD83C][\uDFFB-\uDFFF]/g, "");
   if (!emojiStr) return 0;
-  
+
   // Check if the remaining string consists solely of emojis (extended pictographic)
   const emojiRegex = /^\p{Extended_Pictographic}+$/u;
   if (!emojiRegex.test(emojiStr)) return 0;
-  
+
   // Count the individual emoji glyphs
   const glyphs = emojiStr.match(/\p{Extended_Pictographic}/gu);
   return glyphs ? glyphs.length : 0;
 };
 
-const MessageContainer = ({ contact, messages = [], onSendMessage, isLoading, onBack }) => {
+const MessageContainer = ({
+  contact,
+  messages = [],
+  onSendMessage,
+  isLoading,
+  onBack,
+}) => {
   const { user: myUser } = useSelector((state) => state.auth);
   const { onlineUsers, typingUsers } = useSelector((state) => state.shocket);
   const [inputText, setInputText] = useState("");
@@ -78,6 +98,8 @@ const MessageContainer = ({ contact, messages = [], onSendMessage, isLoading, on
   const [showSearch, setShowSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [showWallpaperPicker, setShowWallpaperPicker] = useState(false);
+  const [wallpaper, setWallpaper] = useState(localStorage.getItem("chat_wallpaper") || "default");
   const messagesEndRef = useRef(null);
   const emojiPickerRef = useRef(null);
 
@@ -116,7 +138,10 @@ const MessageContainer = ({ contact, messages = [], onSendMessage, isLoading, on
   // Close emoji picker when user clicks anywhere outside it
   useEffect(() => {
     const handleClickOutside = (e) => {
-      if (emojiPickerRef.current && !emojiPickerRef.current.contains(e.target)) {
+      if (
+        emojiPickerRef.current &&
+        !emojiPickerRef.current.contains(e.target)
+      ) {
         setShowEmojiPicker(false);
       }
     };
@@ -207,19 +232,22 @@ const MessageContainer = ({ contact, messages = [], onSendMessage, isLoading, on
   if (!contact) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center bg-white/40 dark:bg-zinc-950/40 backdrop-blur-xl border-l md:border border-white/20 dark:border-zinc-800/30 md:rounded-2xl md:shadow-lg p-8 text-center h-full relative overflow-hidden">
-        
         <div className="max-w-md space-y-6 relative z-10 p-8 rounded-3xl border border-white/25 dark:border-zinc-800/30 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-xl shadow-xl transition-all duration-300 hover:shadow-2xl">
           <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-tr from-primary to-primary/80 text-white shadow-lg shadow-primary/20 mb-6 animate-bounce">
             <MessageSquareCode className="h-10 w-10" />
           </div>
-          
+
           <div className="space-y-2">
-            <h3 className="text-2xl font-bold tracking-tight text-foreground">Welcome to BackChodi</h3>
+            <h3 className="text-2xl font-bold tracking-tight text-foreground">
+              Welcome to BackChodi
+            </h3>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              Select a contact from the sidebar list to start chatting. Experience lightning-fast, real-time message sync with visual status checks.
+              Select a contact from the sidebar list to start chatting.
+              Experience lightning-fast, real-time message sync with visual
+              status checks.
             </p>
           </div>
-          
+
           <div className="pt-2">
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20">
               <span className="h-1.5 w-1.5 rounded-full bg-primary animate-ping" />
@@ -232,9 +260,11 @@ const MessageContainer = ({ contact, messages = [], onSendMessage, isLoading, on
   }
 
   return (
-    <div className={`flex flex-1 flex-col h-full bg-white/40 dark:bg-zinc-950/40 backdrop-blur-xl border-l md:border border-white/20 dark:border-zinc-800/30 md:rounded-2xl md:shadow-lg overflow-hidden relative ${
-      contact ? "flex" : "hidden md:flex"
-    }`}>
+    <div
+      className={`flex flex-1 flex-col h-full bg-white/40 dark:bg-zinc-950/40 backdrop-blur-xl border-l md:border border-white/20 dark:border-zinc-800/30 md:rounded-2xl md:shadow-lg overflow-hidden relative ${
+        contact ? "flex" : "hidden md:flex"
+      }`}
+    >
       {/* Chat Header */}
       <header className="flex flex-col shrink-0 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-md border-b border-white/10 dark:border-zinc-850/20 sticky top-0 z-20 transition-all duration-300">
         <div className="flex h-16 items-center justify-between px-3 md:px-6">
@@ -285,12 +315,10 @@ const MessageContainer = ({ contact, messages = [], onSendMessage, isLoading, on
                   <span className="text-primary font-semibold animate-pulse">
                     typing...
                   </span>
+                ) : isOnline ? (
+                  <span className="text-primary font-medium">Online</span>
                 ) : (
-                  isOnline ? (
-                    <span className="text-primary font-medium">Online</span>
-                  ) : (
-                    getLastSeenText(contact?.lastSeen)
-                  )
+                  getLastSeenText(contact?.lastSeen)
                 )}
               </span>
             </div>
@@ -299,9 +327,21 @@ const MessageContainer = ({ contact, messages = [], onSendMessage, isLoading, on
           {/* Action Buttons */}
           <div className="flex items-center gap-1">
             <IconButton
+              icon={Palette}
+              className={`h-9 w-9 transition-colors duration-200 ${
+                showWallpaperPicker
+                  ? "text-primary hover:text-primary/80"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+              iconClassName="h-5 w-5"
+              onClick={() => setShowWallpaperPicker(!showWallpaperPicker)}
+            />
+            <IconButton
               icon={Search}
               className={`h-9 w-9 transition-colors duration-200 ${
-                showSearch ? "text-primary hover:text-primary/80" : "text-muted-foreground hover:text-foreground"
+                showSearch
+                  ? "text-primary hover:text-primary/80"
+                  : "text-muted-foreground hover:text-foreground"
               }`}
               iconClassName="h-5 w-5"
               onClick={() => {
@@ -352,15 +392,14 @@ const MessageContainer = ({ contact, messages = [], onSendMessage, isLoading, on
         )}
       </header>
 
-      {/* Messages Area (Translucent viewport showcasing background mesh) */}
-      <ScrollArea className="flex-1 min-h-0 bg-transparent">
+      {/* Messages Area */}
+      <ScrollArea className={`flex-1 min-h-0 transition-colors duration-300 ${
+        wallpaperOptions.find(o => o.id === wallpaper)?.class || "bg-transparent"
+      }`}>
         <div className="px-3 py-4 md:p-6 space-y-4">
           {isLoading ? (
-            <div className="flex justify-center mt-10">
-              <div className="flex flex-col items-center gap-2">
-                <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-                <span className="text-muted-foreground text-sm">Loading messages...</span>
-              </div>
+            <div className="flex justify-center mt-12">
+              <div className="h-9 w-9 animate-spin rounded-full border-3 border-primary border-t-transparent" />
             </div>
           ) : filteredMessages.length === 0 && searchQuery ? (
             <div className="text-center text-muted-foreground text-sm mt-10 bg-background/40 backdrop-blur-sm rounded-xl p-4 max-w-xs mx-auto border border-border/20">
@@ -369,11 +408,17 @@ const MessageContainer = ({ contact, messages = [], onSendMessage, isLoading, on
           ) : (
             filteredMessages.map((messageObj) => {
               const isMe = messageObj.senderId === myUser?._id;
-              
+
               // Format time
-              const timeString = messageObj.createdAt 
-                ? new Date(messageObj.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+              const timeString = messageObj.createdAt
+                ? new Date(messageObj.createdAt).toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })
+                : new Date().toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  });
 
               const emojiCount = getEmojiOnlyCount(messageObj.message);
               const isEmojiOnly = emojiCount > 0 && emojiCount <= 3;
@@ -387,20 +432,14 @@ const MessageContainer = ({ contact, messages = [], onSendMessage, isLoading, on
                     className={`flex flex-col max-w-[85%] md:max-w-[70%] space-y-1 ${isMe ? "items-end" : "items-start"}`}
                   >
                     {isEmojiOnly ? (
-                      <div
-                        className={`rounded-2xl px-3 py-2 relative backdrop-blur-sm transition-all duration-200 hover:shadow-sm ${
-                          isMe
-                            ? "bg-gradient-to-br from-blue-500/20 to-blue-600/20 border border-blue-500/20 rounded-tr-sm text-foreground"
-                            : "bg-white/50 dark:bg-zinc-900/50 border border-zinc-200/30 dark:border-zinc-800/20 rounded-tl-sm text-foreground"
-                        }`}
-                      >
+                      <div className="relative bg-transparent border-transparent select-all leading-none">
                         <p
                           className={`whitespace-pre-wrap wrap-break-words select-all leading-none ${
                             emojiCount === 1
                               ? "text-[42px] p-2"
                               : emojiCount === 2
-                              ? "text-[34px] p-1.5"
-                              : "text-[28px] p-1"
+                                ? "text-[34px] p-1.5"
+                                : "text-[28px] p-1"
                           }`}
                         >
                           {messageObj.message}
@@ -411,7 +450,8 @@ const MessageContainer = ({ contact, messages = [], onSendMessage, isLoading, on
                           </span>
                           {isMe && (
                             <span className="flex shrink-0">
-                              {(messageObj.status === "sent" || !messageObj.status) && (
+                              {(messageObj.status === "sent" ||
+                                !messageObj.status) && (
                                 <Check className="h-3.5 w-3.5 text-muted-foreground/80" />
                               )}
                               {messageObj.status === "delivered" && (
@@ -435,13 +475,16 @@ const MessageContainer = ({ contact, messages = [], onSendMessage, isLoading, on
                         <div className="whitespace-pre-wrap wrap-break-words leading-[20px] pb-3.5 pr-8">
                           {messageObj.message}
                         </div>
-                        <div className={`absolute bottom-1 right-2 flex items-center gap-1 text-[9.5px] select-none ${
-                          isMe ? "text-white/70" : "text-muted-foreground/60"
-                        }`}>
+                        <div
+                          className={`absolute bottom-1 right-2 flex items-center gap-1 text-[9.5px] select-none ${
+                            isMe ? "text-white/70" : "text-muted-foreground/60"
+                          }`}
+                        >
                           <span>{timeString}</span>
                           {isMe && (
                             <span className="flex shrink-0">
-                              {(messageObj.status === "sent" || !messageObj.status) && (
+                              {(messageObj.status === "sent" ||
+                                !messageObj.status) && (
                                 <Check className="h-3.5 w-3.5 text-white/85" />
                               )}
                               {messageObj.status === "delivered" && (
@@ -487,8 +530,7 @@ const MessageContainer = ({ contact, messages = [], onSendMessage, isLoading, on
       </ScrollArea>
 
       {/* Floating Input Panel Container */}
-      <footer className="relative px-3 pb-3 pt-1 bg-transparent shrink-0">
- 
+      <footer className="relative sm:px-3 pb-3 pt-1 bg-transparent shrink-0">
         {/* Emoji Picker — floats above the input row, anchored to the left */}
         {showEmojiPicker && (
           <div
@@ -507,7 +549,7 @@ const MessageContainer = ({ contact, messages = [], onSendMessage, isLoading, on
             />
           </div>
         )}
- 
+
         <form
           onSubmit={handleSubmit}
           className="flex items-center gap-2 md:gap-3 w-full max-w-5xl mx-auto p-1 z-10"
@@ -517,7 +559,9 @@ const MessageContainer = ({ contact, messages = [], onSendMessage, isLoading, on
             icon={Smile}
             onClick={() => setShowEmojiPicker((prev) => !prev)}
             className={`h-11 w-11 shrink-0 transition-colors duration-200 ${
-              showEmojiPicker ? "text-primary hover:text-primary/80" : "text-muted-foreground hover:text-foreground"
+              showEmojiPicker
+                ? "text-primary hover:text-primary/80"
+                : "text-muted-foreground hover:text-foreground"
             }`}
             iconClassName="h-6 w-6"
           />
@@ -533,7 +577,7 @@ const MessageContainer = ({ contact, messages = [], onSendMessage, isLoading, on
             value={inputText}
             onChange={handleInputChange}
             placeholder="Type a message"
-            className="flex-1 !bg-zinc-200/30 dark:!bg-zinc-900/70 !border-zinc-300/30 dark:!border-zinc-800/40 focus-visible:ring-1 focus-visible:ring-primary/50 rounded-2xl h-11 px-4 transition-all duration-200"
+            className="flex-1 bg-zinc-200/30! dark:bg-zinc-900/70! border-zinc-300/30! dark:border-zinc-800/40 focus-visible:ring-1 focus-visible:ring-primary/50 rounded-full h-11 px-4 transition-all duration-200"
           />
 
           <IconButton
@@ -541,8 +585,8 @@ const MessageContainer = ({ contact, messages = [], onSendMessage, isLoading, on
             icon={SendHorizontal}
             disabled={!inputText.trim()}
             className={`h-11 w-11 shrink-0 transition-colors duration-200 ${
-              inputText.trim() 
-                ? "text-primary hover:text-primary/80 cursor-pointer" 
+              inputText.trim()
+                ? "text-primary hover:text-primary/80 cursor-pointer"
                 : "text-muted-foreground/45 cursor-not-allowed"
             }`}
             iconClassName="h-5.5 w-5.5 ml-0.5"

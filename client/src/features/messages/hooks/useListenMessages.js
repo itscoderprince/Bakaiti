@@ -6,6 +6,7 @@ import {
   markMessagesAsRead,
   markMessagesAsDelivered,
 } from "../store/message.slice.js";
+import { incrementUnreadCount } from "../../auth/store/auth.slice.js";
 import { getSocket } from "../../shocket/store/shocket.slice.js";
 import toast from "react-hot-toast";
 
@@ -35,6 +36,9 @@ export const useListenMessages = (activeContactId) => {
           contactId: newMessage.senderId,
           timestamp: newMessage.createdAt || new Date().toISOString()
         }));
+
+        // Increment unread count badge
+        dispatch(incrementUnreadCount({ contactId: newMessage.senderId }));
 
         // Find sender's full name to display a toast
         const sender = otherUsers?.find((u) => u._id === newMessage.senderId);
