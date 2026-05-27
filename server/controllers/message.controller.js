@@ -59,11 +59,31 @@ export const getMessages = asyncHandler(async (req, res, next) => {
   const myId = req.user._id;
   const userToChatId = req.params.userId;
 
-  // Auto-mark all received messages from this sender as read
-  await Message.updateMany(
-    { senderId: userToChatId, receiverId: myId, status: { $ne: "read" } },
-    { $set: { status: "read" } }
-  );
+  // CRIT-6: Run the status-update write and the message fetch concurrently.
+  // Previously the write blocked the fetch, adding unnecessary latency to every
+  // chat open. Now both happen in parallel and we respond as soon as both settle.
+  //
+  // MED-8: Query Message directly instead of Conversation.populate().
+  // Conversation.messages[] is an unbounded ObjectId array — with 10k messages
+  // it becomes a 120 KB document that must be loaded just to be re-populated.
+  // Querying Message directly with a compound index is faster and avoids bloat.
+  const [messages] = await Promise.all([
+    Message.find({
+      $or: [
+        { senderId: myId, receiverId: userToChatId },
+        { senderId: userToChatId, receiverId: myId },
+      ],
+    })
+      .select("message senderId receiverId createdAt status") // MIN-4: receiverId included
+      .sort({ createdAt: 1 })
+      .lean(),
+
+    // Mark received messages as read (concurrently with the fetch above)
+    Message.updateMany(
+      { senderId: userToChatId, receiverId: myId, status: { $ne: "read" } },
+      { $set: { status: "read" } },
+    ),
+  ]);
 
   // Notify the sender that their messages have been read
   const senderSocketId = getReceiverSocketId(userToChatId);
@@ -71,23 +91,7 @@ export const getMessages = asyncHandler(async (req, res, next) => {
     io.to(senderSocketId).emit("messagesRead", { readerId: myId });
   }
 
-  const conversation = await Conversation.findOne({
-    participants: { $all: [myId, userToChatId] },
-  })
-    .select("-__v -updatedAt")
-    .populate({
-      path: "messages",
-      select: "message senderId createdAt status",
-    })
-    .lean();
-
-  if (!conversation) {
-    return res.status(200).json(new ApiResponse(200, [], "No messages yet"));
-  }
-
   res
     .status(200)
-    .json(
-      new ApiResponse(200, conversation, "Messages retrieved successfully"),
-    );
+    .json(new ApiResponse(200, messages, "Messages retrieved successfully"));
 });

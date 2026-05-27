@@ -105,24 +105,34 @@ export const logout = asyncHandler(async (req, res, next) => {
 // GetOtherUsers
 export const getOtherUsers = asyncHandler(async (req, res, next) => {
   const loggedInUserId = req.user._id;
-  console.log(loggedInUserId);
 
-  // Find all users except the currently logged-in user
-  const otherUsers = await User.find({ _id: { $ne: loggedInUserId } })
-    .select("-password")
-    .lean();
+  // MIN-3: Run user fetch and unread-count aggregation concurrently.
+  // Previously: N individual countDocuments calls (one per contact).
+  // Now: 1 find + 1 aggregate = 2 total DB round-trips regardless of user count.
+  const [otherUsers, unreadCounts] = await Promise.all([
+    User.find({ _id: { $ne: loggedInUserId } })
+      .select("-password")
+      .lean(),
+    Message.aggregate([
+      {
+        $match: {
+          receiverId: loggedInUserId,
+          status: { $ne: "read" },
+        },
+      },
+      { $group: { _id: "$senderId", count: { $sum: 1 } } },
+    ]),
+  ]);
 
-  // For each user, count unread messages they sent to the logged-in user
-  const otherUsersWithUnread = await Promise.all(
-    otherUsers.map(async (u) => {
-      const unreadCount = await Message.countDocuments({
-        senderId: u._id,
-        receiverId: loggedInUserId,
-        status: { $ne: "read" },
-      });
-      return { ...u, unreadCount };
-    })
+  // Build an O(1) lookup map from the aggregation result
+  const unreadMap = Object.fromEntries(
+    unreadCounts.map((r) => [r._id.toString(), r.count]),
   );
+
+  const otherUsersWithUnread = otherUsers.map((u) => ({
+    ...u,
+    unreadCount: unreadMap[u._id.toString()] ?? 0,
+  }));
 
   res
     .status(200)

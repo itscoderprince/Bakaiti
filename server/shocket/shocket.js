@@ -32,17 +32,24 @@ export const getReceiverSocketId = (userId) => userSocketMap[userId];
 
 /**
  * Forwards a typing event (typing / stopTyping) to the target receiver's socket.
- * Extracted here so both handlers share the same lookup logic (DRY principle).
- *
- * @param {string} receiverId  - The _id of the user who should receive the event.
- * @param {string} eventName   - "typing" or "stopTyping"
- * @param {string} senderId    - The _id of the user who is typing.
  */
 const emitToReceiver = (receiverId, eventName, senderId) => {
   const receiverSocketId = userSocketMap[receiverId];
   if (receiverSocketId) {
     io.to(receiverSocketId).emit(eventName, senderId);
   }
+};
+
+// ─── Debounced Online Users Broadcast ────────────────────────────────────────
+// Batches rapid connect/disconnect events so we don't flood ALL clients with
+// a new online-list payload on every individual socket event (MED-9).
+
+let _broadcastTimer = null;
+const broadcastOnlineUsers = () => {
+  clearTimeout(_broadcastTimer);
+  _broadcastTimer = setTimeout(() => {
+    io.emit("getOnlineUsers", Object.keys(userSocketMap));
+  }, 200);
 };
 
 // ─── Socket Connection Handler ───────────────────────────────────────────────
@@ -57,49 +64,61 @@ io.on("connection", (socket) => {
       console.log(`[Socket] connected: userId=${userId} socketId=${socket.id}`);
     }
 
-    // Auto-update all pending "sent" messages to "delivered" status
+    // CRIT-5: Use distinct() to get sender IDs BEFORE the bulk-update so we
+    // avoid a second full-table read after the write (old code: updateMany → find).
+    // Now: distinct → updateMany  (two queries instead of three, no re-read).
     (async () => {
       try {
-        await Message.updateMany(
-          { receiverId: userId, status: "sent" },
-          { $set: { status: "delivered" } }
-        );
-
-        // Find senders to notify that their messages reached this user
-        const deliveredMessages = await Message.find({ receiverId: userId, status: "delivered" });
-        const sendersToNotify = [...new Set(deliveredMessages.map((m) => m.senderId.toString()))];
-        
-        sendersToNotify.forEach((senderId) => {
-          const senderSocketId = userSocketMap[senderId];
-          if (senderSocketId) {
-            io.to(senderSocketId).emit("messagesDelivered", { receiverId: userId });
-          }
+        const senderIds = await Message.distinct("senderId", {
+          receiverId: userId,
+          status: "sent",
         });
+
+        if (senderIds.length > 0) {
+          await Message.updateMany(
+            { receiverId: userId, status: "sent" },
+            { $set: { status: "delivered" } },
+          );
+
+          senderIds.forEach((senderId) => {
+            const senderSocketId = userSocketMap[senderId.toString()];
+            if (senderSocketId) {
+              io.to(senderSocketId).emit("messagesDelivered", {
+                receiverId: userId,
+              });
+            }
+          });
+        }
       } catch (err) {
-        console.error("[Socket] Error handling sent-to-delivered updates on connect:", err);
+        console.error(
+          "[Socket] Error handling sent-to-delivered on connect:",
+          err,
+        );
       }
     })();
   }
 
-  // Broadcast updated online user list to all clients
-  io.emit("getOnlineUsers", Object.keys(userSocketMap));
+  // Broadcast updated online user list — debounced to avoid broadcast storm
+  broadcastOnlineUsers();
 
   // ── Typing indicators ────────────────────────────────────────────────────
-  socket.on("typing", (receiverId) => emitToReceiver(receiverId, "typing", userId));
-  socket.on("stopTyping", (receiverId) => emitToReceiver(receiverId, "stopTyping", userId));
+  socket.on("typing", (receiverId) =>
+    emitToReceiver(receiverId, "typing", userId),
+  );
+  socket.on("stopTyping", (receiverId) =>
+    emitToReceiver(receiverId, "stopTyping", userId),
+  );
 
   // ── Active Chat / Room Ticks ─────────────────────────────────────────────
   socket.on("joinChat", async ({ activeChatId }) => {
     socket.activeChatId = activeChatId;
 
     try {
-      // Mark all messages from activeChatId to the current user (userId) as read in DB
       await Message.updateMany(
         { senderId: activeChatId, receiverId: userId, status: { $ne: "read" } },
-        { $set: { status: "read" } }
+        { $set: { status: "read" } },
       );
 
-      // Notify the sender that their messages have been read
       const senderSocketId = userSocketMap[activeChatId];
       if (senderSocketId) {
         io.to(senderSocketId).emit("messagesRead", { readerId: userId });
@@ -114,7 +133,7 @@ io.on("connection", (socket) => {
   });
 
   // ── Disconnect ───────────────────────────────────────────────────────────
-  socket.on("disconnect", async () => {
+  socket.on("disconnect", () => {
     if (!userId) return; // guard: never registered, nothing to clean up
 
     delete userSocketMap[userId];
@@ -124,16 +143,23 @@ io.on("connection", (socket) => {
 
     const lastSeenTime = new Date();
 
-    // Persist lastSeen in DB so the timestamp survives page reloads
-    try {
-      await User.findByIdAndUpdate(userId, { lastSeen: lastSeenTime });
-    } catch (err) {
-      console.error("[Socket] Failed to persist lastSeen:", err.message);
-    }
+    // CRIT-4: Fire-and-forget with a timeout guard — do NOT await here.
+    // Awaiting inside a disconnect handler blocks the socket event loop for
+    // every disconnection; if MongoDB is slow this causes cascading delays.
+    User.findByIdAndUpdate(
+      userId,
+      { lastSeen: lastSeenTime },
+      { maxTimeMS: 3000 },
+    ).catch((err) =>
+      console.error("[Socket] Failed to persist lastSeen:", err.message),
+    );
 
-    // Broadcast updated lists to all remaining clients
-    io.emit("getOnlineUsers", Object.keys(userSocketMap));
-    io.emit("userLastSeenUpdate", { userId, lastSeen: lastSeenTime.toISOString() });
+    // Broadcast updated lists to all remaining clients (debounced)
+    broadcastOnlineUsers();
+    io.emit("userLastSeenUpdate", {
+      userId,
+      lastSeen: lastSeenTime.toISOString(),
+    });
   });
 });
 

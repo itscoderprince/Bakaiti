@@ -1,17 +1,22 @@
-import { useState, useEffect, useRef, useMemo, memo } from "react";
+import {
+  useState,
+  useEffect,
+  useRef,
+  useMemo,
+  memo,
+  useCallback,
+} from "react";
 import { useSelector } from "react-redux";
 import { Input } from "@/components/ui/input";
 import { IconButton } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { getSocket } from "../../features/shocket/store/shocket.slice.js";
-import EmojiPicker from "emoji-picker-react";
 import {
   Search,
   PhoneCall,
   Video,
   Plus,
   SendHorizontal,
-  Smile,
   EllipsisVertical,
   X,
   ChevronLeft,
@@ -24,11 +29,9 @@ import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuSub,
   DropdownMenuSubTrigger,
   DropdownMenuSubContent,
-  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 
 const wallpaperOptions = [
@@ -83,7 +86,7 @@ const wallpaperOptions = [
 ];
 
 /**
- * Formats user's updatedAt timestamp into a highly polished last seen string.
+ * Formats user's lastSeen timestamp into a polished "last seen" string.
  */
 const getLastSeenText = (timestamp) => {
   if (!timestamp) return "Offline";
@@ -92,13 +95,11 @@ const getLastSeenText = (timestamp) => {
     const options = { month: "short", day: "numeric" };
     const timeOptions = { hour: "2-digit", minute: "2-digit" };
 
-    // Check if it's today
     const today = new Date();
     if (date.toDateString() === today.toDateString()) {
       return `last seen today at ${date.toLocaleTimeString([], timeOptions)}`;
     }
 
-    // Check if it's yesterday
     const yesterday = new Date();
     yesterday.setDate(today.getDate() - 1);
     if (date.toDateString() === yesterday.toDateString()) {
@@ -111,27 +112,144 @@ const getLastSeenText = (timestamp) => {
   }
 };
 
+// ─── CRIT-2: Hoisted regex constants ─────────────────────────────────────────
+// Compiling a Unicode-property regex (/\p{...}/u) is expensive.
+// Previously these were created inside getEmojiOnlyCount() on every call
+// (= once per message per render). Hoisting them to module scope means they
+// are compiled exactly once at import time, regardless of message count.
+
+const EMOJI_STRIP_ZWJ_RE = /[\s\uFE0F\u200D]/g;
+const EMOJI_STRIP_MODIFIER_RE = /[\uD83C][\uDFFB-\uDFFF]/g;
+const EMOJI_ONLY_RE = /^\p{Extended_Pictographic}+$/u;
+const EMOJI_GLYPH_RE = /\p{Extended_Pictographic}/gu;
+
 /**
- * Helper to check if a string contains ONLY emojis (up to 3 emojis).
- * Returns the count of emojis if only emojis are present, otherwise 0.
+ * Returns the emoji count if the string contains ONLY emojis (≤ 3), else 0.
  */
 const getEmojiOnlyCount = (text) => {
   if (!text) return 0;
-
-  // Remove spaces, Zero Width Joiners (\u200D), Variation Selectors (\uFE0F), and skin tone modifiers (FITZPATRICK modifiers \uD83C\uDFFB-\uD83C\uDFFF)
   const emojiStr = text
-    .replace(/[\s\uFE0F\u200D]/g, "")
-    .replace(/[\uD83C][\uDFFB-\uDFFF]/g, "");
+    .replace(EMOJI_STRIP_ZWJ_RE, "")
+    .replace(EMOJI_STRIP_MODIFIER_RE, "");
   if (!emojiStr) return 0;
-
-  // Check if the remaining string consists solely of emojis (extended pictographic)
-  const emojiRegex = /^\p{Extended_Pictographic}+$/u;
-  if (!emojiRegex.test(emojiStr)) return 0;
-
-  // Count the individual emoji glyphs
-  const glyphs = emojiStr.match(/\p{Extended_Pictographic}/gu);
+  if (!EMOJI_ONLY_RE.test(emojiStr)) return 0;
+  const glyphs = emojiStr.match(EMOJI_GLYPH_RE);
   return glyphs ? glyphs.length : 0;
 };
+
+// ─── CRIT-2: Extracted MessageBubble ─────────────────────────────────────────
+// Wrapping the bubble in React.memo means React skips re-rendering it unless
+// its own props actually changed (e.g. status: "delivered" → "read").
+// Previously, every keystroke in the input caused ALL N bubbles to re-render
+// because the inline .map() inside MessageContainer re-ran on every state change.
+
+const MessageBubble = memo(({ messageObj, myUserId }) => {
+  const isMe = messageObj.senderId === myUserId;
+
+  // toLocaleTimeString is a slow Date API — memoize since createdAt is immutable
+  const timeString = useMemo(
+    () =>
+      messageObj.createdAt
+        ? new Date(messageObj.createdAt).toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          })
+        : new Date().toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
+    [messageObj.createdAt],
+  );
+
+  // message text is also immutable once sent
+  const emojiCount = useMemo(
+    () => getEmojiOnlyCount(messageObj.message),
+    [messageObj.message],
+  );
+  const isEmojiOnly = emojiCount > 0 && emojiCount <= 3;
+
+  return (
+    <div
+      className={`flex w-full ${
+        isMe ? "justify-end" : "justify-start"
+      } animate-in fade-in slide-in-from-bottom-2 duration-300 ease-out`}
+    >
+      <div
+        className={`flex flex-col max-w-[85%] md:max-w-[70%] space-y-1 ${
+          isMe ? "items-end" : "items-start"
+        }`}
+      >
+        {isEmojiOnly ? (
+          <div className="relative bg-transparent border-transparent select-all leading-none">
+            <p
+              className={`whitespace-pre-wrap wrap-break-words select-all leading-none ${
+                emojiCount === 1
+                  ? "text-[42px] p-2"
+                  : emojiCount === 2
+                    ? "text-[34px] p-1.5"
+                    : "text-[28px] p-1"
+              }`}
+            >
+              {messageObj.message}
+            </p>
+            <div className="flex justify-end items-center gap-1 pr-1 pt-1 opacity-80">
+              <span className="text-[9px] text-muted-foreground">
+                {timeString}
+              </span>
+              {isMe && (
+                <span className="flex shrink-0">
+                  {(messageObj.status === "sent" || !messageObj.status) && (
+                    <Check className="h-3.5 w-3.5 text-muted-foreground/80" />
+                  )}
+                  {messageObj.status === "delivered" && (
+                    <CheckCheck className="h-3.5 w-3.5 text-muted-foreground/80" />
+                  )}
+                  {messageObj.status === "read" && (
+                    <CheckCheck className="h-3.5 w-3.5 text-sky-500" />
+                  )}
+                </span>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div
+            className={`px-3.5 pt-2 pb-1.5 text-[14.5px] shadow-sm relative min-w-[90px] backdrop-blur-sm transition-all duration-200 ${
+              isMe
+                ? "bg-gradient-to-br from-blue-600 to-blue-700 text-white rounded-2xl rounded-tr-sm shadow-md hover:shadow-lg"
+                : "bg-white/90 dark:bg-zinc-900/90 border border-zinc-200/40 dark:border-zinc-800/30 text-foreground rounded-2xl rounded-tl-sm hover:shadow-md"
+            }`}
+          >
+            <div className="whitespace-pre-wrap wrap-break-words leading-[20px] pb-3.5 pr-8">
+              {messageObj.message}
+            </div>
+            <div
+              className={`absolute bottom-1 right-2 flex items-center gap-1 text-[9.5px] select-none ${
+                isMe ? "text-white/70" : "text-muted-foreground/60"
+              }`}
+            >
+              <span>{timeString}</span>
+              {isMe && (
+                <span className="flex shrink-0">
+                  {(messageObj.status === "sent" || !messageObj.status) && (
+                    <Check className="h-3.5 w-3.5 text-white/85" />
+                  )}
+                  {messageObj.status === "delivered" && (
+                    <CheckCheck className="h-3.5 w-3.5 text-white/85" />
+                  )}
+                  {messageObj.status === "read" && (
+                    <CheckCheck className="h-3.5 w-3.5 text-cyan-300" />
+                  )}
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 const MessageContainer = ({
   contact,
@@ -147,58 +265,55 @@ const MessageContainer = ({
   const isTyping = !!typingUsers?.[contact?._id];
   const [showSearch, setShowSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [wallpaper, setWallpaper] = useState(
     localStorage.getItem("chat_wallpaper") || "default",
   );
   const messagesEndRef = useRef(null);
-  const emojiPickerRef = useRef(null);
-
   const typingTimeoutRef = useRef(null);
   const [isLocalTyping, setIsLocalTyping] = useState(false);
-
+  // showEmojiPicker state removed — emoji picker package uninstalled
   const lastContactIdRef = useRef(null);
   const shouldScrollInstantRef = useRef(false);
 
-  // Mark for instant scroll when contact switches
-  if (contact?._id !== lastContactIdRef.current) {
-    lastContactIdRef.current = contact?._id;
-    shouldScrollInstantRef.current = true;
-  }
+  // MIN-1: Sync showSearch to a ref so scrollToBottom can always read the
+  // latest value without needing it as a useCallback dependency.
+  // (Avoids the stale-closure problem with the old direct capture in a
+  // non-memoized inner function.)
+  const showSearchRef = useRef(showSearch);
+  useEffect(() => {
+    showSearchRef.current = showSearch;
+  }, [showSearch]);
 
-  // Auto scroll to bottom when messages or typing status changes
-  const scrollToBottom = (behavior = "smooth") => {
-    if (!showSearch) {
-      setTimeout(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior, block: "end" });
-      }, 30);
+  // MIN-1: Side-effect (mutating refs) moved from render body into a useEffect.
+  // Running side-effects directly in render is a React anti-pattern that can
+  // cause issues with concurrent features and Strict Mode double-invocation.
+  useEffect(() => {
+    if (contact?._id && contact._id !== lastContactIdRef.current) {
+      lastContactIdRef.current = contact._id;
+      shouldScrollInstantRef.current = true;
     }
-  };
+  }, [contact?._id]);
+
+  // MED-1: Use requestAnimationFrame instead of setTimeout(30ms).
+  // rAF fires after the browser has painted, so the scroll target is always
+  // at the true bottom — no more scroll-position jumps.
+  // useCallback with [] makes the reference stable (reads showSearch via ref).
+  const scrollToBottom = useCallback((behavior = "smooth") => {
+    if (showSearchRef.current) return;
+    requestAnimationFrame(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior, block: "end" });
+    });
+  }, []);
 
   useEffect(() => {
     if (isLoading) return;
-
     if (shouldScrollInstantRef.current) {
       scrollToBottom("auto");
       shouldScrollInstantRef.current = false;
     } else {
       scrollToBottom("smooth");
     }
-  }, [messages, isLoading, isTyping]);
-
-  // Close emoji picker when user clicks anywhere outside it
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (
-        emojiPickerRef.current &&
-        !emojiPickerRef.current.contains(e.target)
-      ) {
-        setShowEmojiPicker(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  }, [messages, isLoading, isTyping, scrollToBottom]);
 
   // Reset search state when switching contacts
   useEffect(() => {
@@ -232,44 +347,53 @@ const MessageContainer = ({
     };
   }, [contact?._id, isLocalTyping]);
 
-  const handleInputChange = (e) => {
-    setInputText(e.target.value);
+  // MED-6: useCallback prevents a new function reference on every render,
+  // avoiding unnecessary prop churn on the <Input> element.
+  const handleInputChange = useCallback(
+    (e) => {
+      setInputText(e.target.value);
 
-    const socket = getSocket();
-    if (!socket || !contact?._id) return;
+      const socket = getSocket();
+      if (!socket || !contact?._id) return;
 
-    if (!isLocalTyping) {
-      setIsLocalTyping(true);
-      socket.emit("typing", contact._id);
-    }
+      if (!isLocalTyping) {
+        setIsLocalTyping(true);
+        socket.emit("typing", contact._id);
+      }
 
-    if (typingTimeoutRef.current) {
-      clearTimeout(typingTimeoutRef.current);
-    }
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
 
-    typingTimeoutRef.current = setTimeout(() => {
-      socket.emit("stopTyping", contact._id);
-      setIsLocalTyping(false);
-    }, 2000);
-  };
+      typingTimeoutRef.current = setTimeout(() => {
+        socket.emit("stopTyping", contact._id);
+        setIsLocalTyping(false);
+      }, 2000);
+    },
+    [contact?._id, isLocalTyping],
+  );
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (!inputText.trim()) return;
+  // MED-6: same stabilization for the form submit handler
+  const handleSubmit = useCallback(
+    (e) => {
+      e.preventDefault();
+      if (!inputText.trim()) return;
 
-    // Stop typing indicator on send
-    if (typingTimeoutRef.current) {
-      clearTimeout(typingTimeoutRef.current);
-    }
-    const socket = getSocket();
-    if (socket && contact?._id && isLocalTyping) {
-      socket.emit("stopTyping", contact._id);
-      setIsLocalTyping(false);
-    }
+      // Stop typing indicator on send
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+      const socket = getSocket();
+      if (socket && contact?._id && isLocalTyping) {
+        socket.emit("stopTyping", contact._id);
+        setIsLocalTyping(false);
+      }
 
-    onSendMessage(inputText);
-    setInputText("");
-  };
+      onSendMessage(inputText);
+      setInputText("");
+    },
+    [inputText, contact?._id, isLocalTyping, onSendMessage],
+  );
 
   // Filter messages based on search query
   const filteredMessages = useMemo(() => {
@@ -279,6 +403,32 @@ const MessageContainer = ({
       m.message?.toLowerCase().includes(searchQuery.toLowerCase()),
     );
   }, [messages, searchQuery]);
+
+  // MED-2: Memoize wallpaper class — avoids array.find() on every render.
+  // Previously this ran inline in JSX, firing on every keystroke.
+  const wallpaperClass = useMemo(
+    () =>
+      wallpaperOptions.find((o) => o.id === wallpaper)?.class ??
+      "bg-transparent",
+    [wallpaper],
+  );
+
+  // CRIT-2: Memoize the full rendered message list.
+  // Combined with MessageBubble being React.memo, this means:
+  // 1. The .map() itself only runs when filteredMessages or myUser._id changes.
+  // 2. Individual MessageBubble instances only re-render when their own props change
+  //    (e.g. status: "delivered" → "read"), not when inputText changes.
+  const renderedMessages = useMemo(
+    () =>
+      filteredMessages.map((messageObj) => (
+        <MessageBubble
+          key={messageObj._id}
+          messageObj={messageObj}
+          myUserId={myUser?._id}
+        />
+      )),
+    [filteredMessages, myUser?._id],
+  );
 
   if (!contact) {
     return (
@@ -471,12 +621,9 @@ const MessageContainer = ({
         )}
       </header>
 
-      {/* Messages Area */}
+      {/* Messages Area — MED-2: wallpaperClass is memoized (no inline find()) */}
       <ScrollArea
-        className={`flex-1 min-h-0 transition-colors duration-300 ${
-          wallpaperOptions.find((o) => o.id === wallpaper)?.class ||
-          "bg-transparent"
-        }`}
+        className={`flex-1 min-h-0 transition-colors duration-300 ${wallpaperClass}`}
       >
         <div className="px-3 py-4 md:p-6 space-y-4">
           {isLoading ? (
@@ -485,105 +632,12 @@ const MessageContainer = ({
             </div>
           ) : filteredMessages.length === 0 && searchQuery ? (
             <div className="text-center text-muted-foreground text-sm mt-10 bg-background/40 backdrop-blur-sm rounded-xl p-4 max-w-xs mx-auto border border-border/20">
-              No messages found for "{searchQuery}"
+              No messages found for &quot;{searchQuery}&quot;
             </div>
           ) : (
-            filteredMessages.map((messageObj) => {
-              const isMe = messageObj.senderId === myUser?._id;
-
-              // Format time
-              const timeString = messageObj.createdAt
-                ? new Date(messageObj.createdAt).toLocaleTimeString([], {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })
-                : new Date().toLocaleTimeString([], {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  });
-
-              const emojiCount = getEmojiOnlyCount(messageObj.message);
-              const isEmojiOnly = emojiCount > 0 && emojiCount <= 3;
-
-              return (
-                <div
-                  key={messageObj._id}
-                  className={`flex w-full ${isMe ? "justify-end" : "justify-start"} animate-in fade-in slide-in-from-bottom-2 duration-300 ease-out`}
-                >
-                  <div
-                    className={`flex flex-col max-w-[85%] md:max-w-[70%] space-y-1 ${isMe ? "items-end" : "items-start"}`}
-                  >
-                    {isEmojiOnly ? (
-                      <div className="relative bg-transparent border-transparent select-all leading-none">
-                        <p
-                          className={`whitespace-pre-wrap wrap-break-words select-all leading-none ${
-                            emojiCount === 1
-                              ? "text-[42px] p-2"
-                              : emojiCount === 2
-                                ? "text-[34px] p-1.5"
-                                : "text-[28px] p-1"
-                          }`}
-                        >
-                          {messageObj.message}
-                        </p>
-                        <div className="flex justify-end items-center gap-1 pr-1 pt-1 opacity-80">
-                          <span className="text-[9px] text-muted-foreground">
-                            {timeString}
-                          </span>
-                          {isMe && (
-                            <span className="flex shrink-0">
-                              {(messageObj.status === "sent" ||
-                                !messageObj.status) && (
-                                <Check className="h-3.5 w-3.5 text-muted-foreground/80" />
-                              )}
-                              {messageObj.status === "delivered" && (
-                                <CheckCheck className="h-3.5 w-3.5 text-muted-foreground/80" />
-                              )}
-                              {messageObj.status === "read" && (
-                                <CheckCheck className="h-3.5 w-3.5 text-sky-500" />
-                              )}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    ) : (
-                      <div
-                        className={`px-3.5 pt-2 pb-1.5 text-[14.5px] shadow-sm relative min-w-[90px] backdrop-blur-sm transition-all duration-200 ${
-                          isMe
-                            ? "bg-gradient-to-br from-blue-600 to-blue-700 text-white rounded-2xl rounded-tr-sm shadow-md hover:shadow-lg"
-                            : "bg-white/90 dark:bg-zinc-900/90 border border-zinc-200/40 dark:border-zinc-800/30 text-foreground rounded-2xl rounded-tl-sm hover:shadow-md"
-                        }`}
-                      >
-                        <div className="whitespace-pre-wrap wrap-break-words leading-[20px] pb-3.5 pr-8">
-                          {messageObj.message}
-                        </div>
-                        <div
-                          className={`absolute bottom-1 right-2 flex items-center gap-1 text-[9.5px] select-none ${
-                            isMe ? "text-white/70" : "text-muted-foreground/60"
-                          }`}
-                        >
-                          <span>{timeString}</span>
-                          {isMe && (
-                            <span className="flex shrink-0">
-                              {(messageObj.status === "sent" ||
-                                !messageObj.status) && (
-                                <Check className="h-3.5 w-3.5 text-white/85" />
-                              )}
-                              {messageObj.status === "delivered" && (
-                                <CheckCheck className="h-3.5 w-3.5 text-white/85" />
-                              )}
-                              {messageObj.status === "read" && (
-                                <CheckCheck className="h-3.5 w-3.5 text-cyan-300" />
-                              )}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })
+            // CRIT-2: Pre-memoized list — typing in the input no longer causes
+            // all message bubbles to re-render
+            renderedMessages
           )}
 
           {/* Typing Animation Bubble */}
@@ -613,41 +667,10 @@ const MessageContainer = ({
 
       {/* Floating Input Panel Container */}
       <footer className="relative sm:px-3 pb-3 pt-1 bg-transparent shrink-0">
-        {/* Emoji Picker — floats above the input row, anchored to the left */}
-        {showEmojiPicker && (
-          <div
-            ref={emojiPickerRef}
-            className="absolute bottom-full left-3 right-3 sm:left-4 sm:right-auto mb-3 z-50 shadow-2xl rounded-2xl overflow-hidden w-[calc(100vw-2rem)] sm:w-[330px] animate-in slide-in-from-bottom-2 duration-200"
-          >
-            <EmojiPicker
-              onEmojiClick={(emojiData) => {
-                // Append the selected emoji character to the current input text
-                setInputText((prev) => prev + emojiData.emoji);
-              }}
-              searchDisabled={false}
-              skinTonesDisabled
-              height={380}
-              width="100%"
-            />
-          </div>
-        )}
-
         <form
           onSubmit={handleSubmit}
           className="flex items-center gap-2 md:gap-3 w-full max-w-5xl mx-auto p-1 z-10"
         >
-          <IconButton
-            type="button"
-            icon={Smile}
-            onClick={() => setShowEmojiPicker((prev) => !prev)}
-            className={`h-11 w-11 shrink-0 transition-colors duration-200 ${
-              showEmojiPicker
-                ? "text-primary hover:text-primary/80"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-            iconClassName="h-6 w-6"
-          />
-
           <IconButton
             type="button"
             icon={Plus}
@@ -668,8 +691,8 @@ const MessageContainer = ({
             disabled={!inputText.trim()}
             className={`h-11 w-11 shrink-0 rounded-full transition-all duration-200 ${
               inputText.trim()
-                ? "!bg-primary !text-white shadow-md cursor-pointer hover:brightness-110 active:scale-95"
-                : "!bg-zinc-200/20 dark:!bg-zinc-800/20 !text-muted-foreground/30 cursor-not-allowed"
+                ? "bg-primary text-white shadow-md cursor-pointer hover:brightness-110 active:scale-95"
+                : "bg-zinc-200/20 dark:bg-zinc-800/20 text-muted-foreground/30 cursor-not-allowed"
             }`}
             iconClassName="h-5.5 w-5.5 ml-0.5"
           />
