@@ -20,16 +20,66 @@ import {
   CheckCheck,
   Palette,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 
 const wallpaperOptions = [
-  { id: "default", name: "Default Glow", class: "bg-transparent" },
-  { id: "solid-dark", name: "Charcoal", class: "!bg-zinc-950" },
-  { id: "solid-navy", name: "Navy Blue", class: "!bg-slate-900" },
-  { id: "solid-plum", name: "Deep Plum", class: "!bg-purple-950/60" },
-  { id: "grad-royal", name: "Royal Sky", class: "!bg-gradient-to-b !from-blue-950/40 !via-zinc-950 !to-black" },
-  { id: "grad-emerald", name: "Forest Mint", class: "!bg-gradient-to-b !from-emerald-950/30 !via-neutral-950 !to-black" },
-  { id: "grad-sunset", name: "Sunset Velvet", class: "!bg-gradient-to-b !from-rose-950/30 !via-zinc-950 !to-black" },
-  { id: "grad-ocean", name: "Ocean Breeze", class: "!bg-gradient-to-b !from-cyan-950/30 !via-slate-950 !to-black" },
+  {
+    id: "default",
+    name: "Default Glow",
+    class: "bg-transparent",
+    preview: "bg-neutral-800 border border-white/20",
+  },
+  {
+    id: "solid-dark",
+    name: "Charcoal",
+    class: "!bg-zinc-950",
+    preview: "bg-zinc-950",
+  },
+  {
+    id: "solid-navy",
+    name: "Navy Blue",
+    class: "!bg-slate-900",
+    preview: "bg-slate-900",
+  },
+  {
+    id: "solid-plum",
+    name: "Deep Plum",
+    class: "!bg-purple-950/60",
+    preview: "bg-purple-950",
+  },
+  {
+    id: "grad-royal",
+    name: "Royal Sky",
+    class: "!bg-gradient-to-b !from-blue-950/40 !via-zinc-950 !to-black",
+    preview: "bg-gradient-to-br from-blue-950 to-black",
+  },
+  {
+    id: "grad-emerald",
+    name: "Forest Mint",
+    class: "!bg-gradient-to-b !from-emerald-950/30 !via-neutral-950 !to-black",
+    preview: "bg-gradient-to-br from-emerald-950 to-black",
+  },
+  {
+    id: "grad-sunset",
+    name: "Sunset Velvet",
+    class: "!bg-gradient-to-b !from-rose-950/30 !via-zinc-950 !to-black",
+    preview: "bg-gradient-to-br from-rose-950 to-black",
+  },
+  {
+    id: "grad-ocean",
+    name: "Ocean Breeze",
+    class: "!bg-gradient-to-b !from-cyan-950/30 !via-slate-950 !to-black",
+    preview: "bg-gradient-to-br from-cyan-950 to-black",
+  },
 ];
 
 /**
@@ -98,8 +148,9 @@ const MessageContainer = ({
   const [showSearch, setShowSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [showWallpaperPicker, setShowWallpaperPicker] = useState(false);
-  const [wallpaper, setWallpaper] = useState(localStorage.getItem("chat_wallpaper") || "default");
+  const [wallpaper, setWallpaper] = useState(
+    localStorage.getItem("chat_wallpaper") || "default",
+  );
   const messagesEndRef = useRef(null);
   const emojiPickerRef = useRef(null);
 
@@ -231,7 +282,7 @@ const MessageContainer = ({
 
   if (!contact) {
     return (
-      <div className="flex flex-1 flex-col items-center justify-center bg-white/40 dark:bg-zinc-950/40 backdrop-blur-xl border-l md:border border-white/20 dark:border-zinc-800/30 md:rounded-2xl md:shadow-lg p-8 text-center h-full relative overflow-hidden">
+      <div className="flex flex-1 flex-col items-center justify-start pt-20 bg-white/40 dark:bg-zinc-950/40 backdrop-blur-xl border-l md:border border-white/20 dark:border-zinc-800/30 md:rounded-2xl md:shadow-lg p-8 text-center h-full relative overflow-hidden">
         <div className="max-w-md space-y-6 relative z-10 p-8 rounded-3xl border border-white/25 dark:border-zinc-800/30 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-xl shadow-xl transition-all duration-300 hover:shadow-2xl">
           <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-tr from-primary to-primary/80 text-white shadow-lg shadow-primary/20 mb-6 animate-bounce">
             <MessageSquareCode className="h-10 w-10" />
@@ -327,16 +378,6 @@ const MessageContainer = ({
           {/* Action Buttons */}
           <div className="flex items-center gap-1">
             <IconButton
-              icon={Palette}
-              className={`h-9 w-9 transition-colors duration-200 ${
-                showWallpaperPicker
-                  ? "text-primary hover:text-primary/80"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-              iconClassName="h-5 w-5"
-              onClick={() => setShowWallpaperPicker(!showWallpaperPicker)}
-            />
-            <IconButton
               icon={Search}
               className={`h-9 w-9 transition-colors duration-200 ${
                 showSearch
@@ -359,11 +400,49 @@ const MessageContainer = ({
               className="h-9 w-9 text-muted-foreground hover:text-foreground transition-colors duration-200"
               iconClassName="h-5 w-5"
             />
-            <IconButton
-              icon={EllipsisVertical}
-              className="h-9 w-9 hidden sm:inline-flex text-muted-foreground hover:text-foreground transition-colors duration-200"
-              iconClassName="h-5 w-5"
-            />
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                className="h-9 w-9 flex items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground transition-all duration-200 cursor-pointer"
+                render={<button aria-label="More options" />}
+              >
+                <EllipsisVertical className="h-5 w-5" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger className="cursor-pointer gap-2">
+                    <Palette className="h-4 w-4" />
+                    <span>Theme</span>
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent side="left" className="w-48 p-3">
+                    <div className="grid grid-cols-4 gap-2">
+                      {wallpaperOptions.map((option) => (
+                        <button
+                          key={option.id}
+                          title={option.name}
+                          onClick={() => {
+                            setWallpaper(option.id);
+                            localStorage.setItem("chat_wallpaper", option.id);
+                          }}
+                          className={`w-9 h-9 rounded-full cursor-pointer relative transition-all duration-200 border-2 ${
+                            option.preview
+                          } ${
+                            wallpaper === option.id
+                              ? "border-primary scale-110 shadow-md"
+                              : "border-white/10 hover:border-white/30"
+                          }`}
+                        >
+                          {wallpaper === option.id && (
+                            <span className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-full">
+                              <Check className="h-4 w-4 text-white" />
+                            </span>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
 
@@ -393,9 +472,12 @@ const MessageContainer = ({
       </header>
 
       {/* Messages Area */}
-      <ScrollArea className={`flex-1 min-h-0 transition-colors duration-300 ${
-        wallpaperOptions.find(o => o.id === wallpaper)?.class || "bg-transparent"
-      }`}>
+      <ScrollArea
+        className={`flex-1 min-h-0 transition-colors duration-300 ${
+          wallpaperOptions.find((o) => o.id === wallpaper)?.class ||
+          "bg-transparent"
+        }`}
+      >
         <div className="px-3 py-4 md:p-6 space-y-4">
           {isLoading ? (
             <div className="flex justify-center mt-12">
@@ -584,10 +666,10 @@ const MessageContainer = ({
             type="submit"
             icon={SendHorizontal}
             disabled={!inputText.trim()}
-            className={`h-11 w-11 shrink-0 transition-colors duration-200 ${
+            className={`h-11 w-11 shrink-0 rounded-full transition-all duration-200 ${
               inputText.trim()
-                ? "text-primary hover:text-primary/80 cursor-pointer"
-                : "text-muted-foreground/45 cursor-not-allowed"
+                ? "!bg-primary !text-white shadow-md cursor-pointer hover:brightness-110 active:scale-95"
+                : "!bg-zinc-200/20 dark:!bg-zinc-800/20 !text-muted-foreground/30 cursor-not-allowed"
             }`}
             iconClassName="h-5.5 w-5.5 ml-0.5"
           />
