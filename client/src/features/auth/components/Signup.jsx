@@ -30,8 +30,18 @@ const Signup = () => {
   } = form;
 
   return (
-    <div className="flex min-h-svh flex-col items-center justify-center gap-6 bg-muted p-6 md:p-10">
-      <div className="flex w-full max-w-lg flex-col gap-6">
+    <div className="flex min-h-svh flex-col items-center justify-center bg-radial from-slate-50 via-zinc-100 to-neutral-200 dark:bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] dark:from-slate-900 dark:via-neutral-950 dark:to-black p-6 md:p-10 relative overflow-hidden">
+      {/* Ambient background glows */}
+      <div
+        className="absolute top-1/4 left-1/4 w-72 h-72 rounded-full bg-blue-500/10 blur-3xl animate-pulse"
+        style={{ animationDuration: "8s" }}
+      />
+      <div
+        className="absolute bottom-1/4 right-1/4 w-80 h-80 rounded-full bg-indigo-500/10 blur-3xl animate-pulse"
+        style={{ animationDuration: "12s" }}
+      />
+
+      <div className="flex w-full max-w-lg flex-col gap-6 relative z-10">
         <Card>
           <CardHeader className="text-center">
             <CardTitle className="text-xl">Create your account</CardTitle>
@@ -80,10 +90,7 @@ const Signup = () => {
 
                 <div className="grid gap-2">
                   <Label htmlFor="email" className="flex items-center gap-2">
-                    <Mail
-                      size={14}
-                      className="text-muted-foreground"
-                    />
+                    <Mail size={14} className="text-muted-foreground" />
                     Email
                   </Label>
                   <Input
@@ -99,7 +106,7 @@ const Signup = () => {
                   )}
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="grid gap-2">
                     <Label
                       htmlFor="password"
@@ -191,7 +198,7 @@ const Signup = () => {
 
                 <Button
                   type="submit"
-                  className="w-full"
+                  className="w-full mt-2"
                   disabled={isLoading}
                 >
                   {isLoading ? (

@@ -49,8 +49,12 @@ const ForgotPassword = () => {
   };
 
   return (
-    <div className="flex min-h-svh flex-col items-center justify-center gap-6 bg-muted p-6 md:p-10">
-      <div className="flex w-full max-w-md flex-col gap-6">
+    <div className="flex min-h-svh flex-col items-center justify-center bg-radial from-slate-50 via-zinc-100 to-neutral-200 dark:bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] dark:from-slate-900 dark:via-neutral-950 dark:to-black p-6 md:p-10 relative overflow-hidden">
+      {/* Ambient background glows */}
+      <div className="absolute top-1/4 left-1/4 w-72 h-72 rounded-full bg-blue-500/10 blur-3xl animate-pulse" style={{ animationDuration: "8s" }} />
+      <div className="absolute bottom-1/4 right-1/4 w-80 h-80 rounded-full bg-indigo-500/10 blur-3xl animate-pulse" style={{ animationDuration: "12s" }} />
+
+      <div className="flex w-full max-w-md flex-col gap-6 relative z-10">
         <Card>
           <CardHeader className="text-center">
             <CardTitle className="text-xl">Forgot Password</CardTitle>
@@ -61,7 +65,7 @@ const ForgotPassword = () => {
           <CardContent>
             {resetInfo ? (
               <div className="space-y-4">
-                <div className="rounded-xl bg-emerald-500/10 p-4 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-sm">
+                <div className="rounded-xl bg-primary/10 p-4 border border-primary/20 text-primary text-sm">
                   <p className="font-semibold mb-1">Request successful!</p>
                   {resetInfo.emailSent ? (
                     <p>We've dispatched a reset link to your registered email address.</p>
@@ -70,7 +74,7 @@ const ForgotPassword = () => {
                       <p>SMTP is offline. We've printed the recovery link in the developer console.</p>
                       {resetInfo.resetUrl && (
                         <div className="mt-2 p-2.5 rounded-lg bg-zinc-950 text-zinc-100 dark:bg-zinc-900 text-[11px] font-mono break-all select-all border border-zinc-800">
-                          <p className="font-semibold text-emerald-500 mb-1">Dev Mode Link:</p>
+                          <p className="font-semibold text-blue-500 mb-1">Dev Mode Link:</p>
                           <a href={resetInfo.resetUrl} className="underline text-sky-400 hover:text-sky-300">
                             {resetInfo.resetUrl}
                           </a>

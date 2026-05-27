@@ -1,18 +1,21 @@
 import { createRoot } from "react-dom/client";
+import { lazy, Suspense } from "react";
 import "./index.css";
 import App from "./App.jsx";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
-import Home from "./pages/home/Home.jsx";
-import Login from "./features/auth/components/Login.jsx";
-import Signup from "./features/auth/components/Signup.jsx";
-import ForgotPassword from "./features/auth/components/ForgotPassword.jsx";
-import ResetPassword from "./features/auth/components/ResetPassword.jsx";
 import { Provider } from "react-redux";
 import { store } from "./store/store.js";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "react-hot-toast";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
 import PublicRoute from "./components/PublicRoute.jsx";
+
+// Lazy loaded page components for optimal bundle chunking
+const Home = lazy(() => import("./pages/home/Home.jsx"));
+const Login = lazy(() => import("./features/auth/components/Login.jsx"));
+const Signup = lazy(() => import("./features/auth/components/Signup.jsx"));
+const ForgotPassword = lazy(() => import("./features/auth/components/ForgotPassword.jsx"));
+const ResetPassword = lazy(() => import("./features/auth/components/ResetPassword.jsx"));
 
 const router = createBrowserRouter([
   {
@@ -23,7 +26,9 @@ const router = createBrowserRouter([
         index: true,
         element: (
           <ProtectedRoute>
-            <Home />
+            <Suspense fallback={null}>
+              <Home />
+            </Suspense>
           </ProtectedRoute>
         ),
       },
@@ -31,7 +36,9 @@ const router = createBrowserRouter([
         path: "login",
         element: (
           <PublicRoute>
-            <Login />
+            <Suspense fallback={null}>
+              <Login />
+            </Suspense>
           </PublicRoute>
         ),
       },
@@ -39,7 +46,9 @@ const router = createBrowserRouter([
         path: "signup",
         element: (
           <PublicRoute>
-            <Signup />
+            <Suspense fallback={null}>
+              <Signup />
+            </Suspense>
           </PublicRoute>
         ),
       },
@@ -47,7 +56,9 @@ const router = createBrowserRouter([
         path: "forgot-password",
         element: (
           <PublicRoute>
-            <ForgotPassword />
+            <Suspense fallback={null}>
+              <ForgotPassword />
+            </Suspense>
           </PublicRoute>
         ),
       },
@@ -55,7 +66,9 @@ const router = createBrowserRouter([
         path: "reset-password/:token",
         element: (
           <PublicRoute>
-            <ResetPassword />
+            <Suspense fallback={null}>
+              <ResetPassword />
+            </Suspense>
           </PublicRoute>
         ),
       },

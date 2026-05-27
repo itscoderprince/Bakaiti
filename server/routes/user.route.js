@@ -8,6 +8,7 @@ import {
   forgotPassword,
   resetPassword,
   changePassword,
+  updateProfile,
 } from "../controllers/user.controller.js";
 import { validate } from "../middlewares/validate.middleware.js";
 import { isAuthenticated } from "../middlewares/auth.middleware.js";
@@ -17,6 +18,7 @@ import {
   forgotPasswordSchema,
   resetPasswordSchema,
   changePasswordSchema,
+  updateProfileSchema,
 } from "../schemas/auth.schema.js";
 
 const router = express.Router();
@@ -31,5 +33,6 @@ router.get("/", isAuthenticated, getOtherUsers);
 router.post("/forgot-password", validate(forgotPasswordSchema), forgotPassword);
 router.post("/reset-password/:token", validate(resetPasswordSchema), resetPassword);
 router.post("/change-password", isAuthenticated, validate(changePasswordSchema), changePassword);
+router.put("/update-profile", isAuthenticated, validate(updateProfileSchema), updateProfile);
 
 export default router;

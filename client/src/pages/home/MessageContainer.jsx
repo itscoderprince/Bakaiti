@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, memo } from "react";
 import { useSelector } from "react-redux";
 import { Input } from "@/components/ui/input";
 import { IconButton } from "@/components/ui/button";
@@ -84,16 +84,34 @@ const MessageContainer = ({ contact, messages = [], onSendMessage, isLoading, on
   const typingTimeoutRef = useRef(null);
   const [isLocalTyping, setIsLocalTyping] = useState(false);
 
+  const lastContactIdRef = useRef(null);
+  const shouldScrollInstantRef = useRef(false);
+
+  // Mark for instant scroll when contact switches
+  if (contact?._id !== lastContactIdRef.current) {
+    lastContactIdRef.current = contact?._id;
+    shouldScrollInstantRef.current = true;
+  }
+
   // Auto scroll to bottom when messages or typing status changes
-  const scrollToBottom = () => {
+  const scrollToBottom = (behavior = "smooth") => {
     if (!showSearch) {
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior, block: "end" });
+      }, 30);
     }
   };
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages, isTyping]);
+    if (isLoading) return;
+
+    if (shouldScrollInstantRef.current) {
+      scrollToBottom("auto");
+      shouldScrollInstantRef.current = false;
+    } else {
+      scrollToBottom("smooth");
+    }
+  }, [messages, isLoading, isTyping]);
 
   // Close emoji picker when user clicks anywhere outside it
   useEffect(() => {
@@ -188,13 +206,10 @@ const MessageContainer = ({ contact, messages = [], onSendMessage, isLoading, on
 
   if (!contact) {
     return (
-      <div className="flex flex-1 flex-col items-center justify-center bg-radial from-slate-50 via-zinc-100 to-neutral-200 dark:bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] dark:from-slate-900 dark:via-neutral-950 dark:to-black p-8 text-center h-full relative overflow-hidden">
-        {/* Soft Ambient Background Glows */}
-        <div className="absolute top-1/4 left-1/4 w-72 h-72 rounded-full bg-emerald-500/10 blur-3xl animate-pulse" style={{ animationDuration: "8s" }} />
-        <div className="absolute bottom-1/4 right-1/4 w-80 h-80 rounded-full bg-indigo-500/10 blur-3xl animate-pulse" style={{ animationDuration: "12s" }} />
+      <div className="flex flex-1 flex-col items-center justify-center bg-white/40 dark:bg-zinc-950/40 backdrop-blur-xl border-l md:border border-white/20 dark:border-zinc-800/30 md:rounded-2xl md:shadow-lg p-8 text-center h-full relative overflow-hidden">
         
-        <div className="max-w-md space-y-6 relative z-10 p-8 rounded-3xl border border-white/20 dark:border-zinc-800/30 bg-white/50 dark:bg-zinc-900/50 backdrop-blur-xl shadow-xl transition-all duration-300 hover:shadow-2xl">
-          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-500/20 mb-6 animate-bounce">
+        <div className="max-w-md space-y-6 relative z-10 p-8 rounded-3xl border border-white/25 dark:border-zinc-800/30 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-xl shadow-xl transition-all duration-300 hover:shadow-2xl">
+          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-tr from-primary to-primary/80 text-white shadow-lg shadow-primary/20 mb-6 animate-bounce">
             <MessageSquareCode className="h-10 w-10" />
           </div>
           
@@ -206,8 +221,8 @@ const MessageContainer = ({ contact, messages = [], onSendMessage, isLoading, on
           </div>
           
           <div className="pt-2">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-ping" />
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20">
+              <span className="h-1.5 w-1.5 rounded-full bg-primary animate-ping" />
               Secure Real-Time Connected
             </span>
           </div>
@@ -217,11 +232,11 @@ const MessageContainer = ({ contact, messages = [], onSendMessage, isLoading, on
   }
 
   return (
-    <div className={`flex flex-1 flex-col h-full bg-background overflow-hidden relative ${
+    <div className={`flex flex-1 flex-col h-full bg-white/40 dark:bg-zinc-950/40 backdrop-blur-xl border-l md:border border-white/20 dark:border-zinc-800/30 md:rounded-2xl md:shadow-lg overflow-hidden relative ${
       contact ? "flex" : "hidden md:flex"
     }`}>
       {/* Chat Header */}
-      <header className="flex flex-col shrink-0 bg-white/70 dark:bg-zinc-950/70 backdrop-blur-xl border-b border-white/20 dark:border-zinc-800/30 sticky top-0 z-20 transition-all duration-300">
+      <header className="flex flex-col shrink-0 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-md border-b border-white/10 dark:border-zinc-850/20 sticky top-0 z-20 transition-all duration-300">
         <div className="flex h-16 items-center justify-between px-3 md:px-6">
           <div className="flex items-center gap-3 min-w-0">
             {onBack && (
@@ -234,36 +249,30 @@ const MessageContainer = ({ contact, messages = [], onSendMessage, isLoading, on
               </button>
             )}
 
-            {/* Contact Details Avatar with Pulsing Status Ring */}
+            {/* Contact Details Avatar */}
             <div className="relative shrink-0">
-              <div className={`relative rounded-full transition-all duration-300 ${
-                isOnline ? "ring-2 ring-emerald-500 ring-offset-2 ring-offset-background dark:ring-offset-zinc-950 animate-pulse" : ""
-              }`}>
-                {contact.profilePic ? (
-                  <img
-                    src={contact.profilePic}
-                    alt={contact.name}
-                    className="flex h-9 w-9 object-cover items-center justify-center rounded-full shadow-sm"
-                  />
-                ) : (
-                  <div className="flex h-9 w-9 items-center justify-center rounded-full text-white text-sm font-semibold shadow-sm bg-gradient-to-tr from-emerald-500 to-teal-600">
-                    {contact.name
-                      ? contact.name
-                          .trim()
-                          .split(/\s+/)
-                          .map((n) => n[0])
-                          .filter(Boolean)
-                          .join("")
-                          .substring(0, 2)
-                          .toUpperCase()
-                      : "U"}
-                  </div>
-                )}
-              </div>
+              {contact.profilePic ? (
+                <img
+                  src={contact.profilePic}
+                  alt={contact.name}
+                  className="flex h-9 w-9 object-cover items-center justify-center rounded-full shadow-sm"
+                />
+              ) : (
+                <div className="flex h-9 w-9 items-center justify-center rounded-full text-white text-sm font-semibold shadow-sm bg-gradient-to-tr from-primary to-primary/80">
+                  {contact.name
+                    ? contact.name
+                        .trim()
+                        .split(/\s+/)
+                        .map((n) => n[0])
+                        .filter(Boolean)
+                        .join("")
+                        .substring(0, 2)
+                        .toUpperCase()
+                    : "U"}
+                </div>
+              )}
               {isOnline && (
-                <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-background dark:border-zinc-950 bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]">
-                  <span className="absolute inset-0 rounded-full bg-emerald-400 animate-ping opacity-75" />
-                </span>
+                <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-background dark:border-zinc-950 bg-green-500" />
               )}
             </div>
 
@@ -273,12 +282,12 @@ const MessageContainer = ({ contact, messages = [], onSendMessage, isLoading, on
               </span>
               <span className="text-[11px] text-muted-foreground leading-tight truncate">
                 {isTyping ? (
-                  <span className="text-emerald-500 font-semibold animate-pulse">
+                  <span className="text-primary font-semibold animate-pulse">
                     typing...
                   </span>
                 ) : (
                   isOnline ? (
-                    <span className="text-emerald-500 font-medium">Online</span>
+                    <span className="text-primary font-medium">Online</span>
                   ) : (
                     getLastSeenText(contact?.lastSeen)
                   )
@@ -287,14 +296,14 @@ const MessageContainer = ({ contact, messages = [], onSendMessage, isLoading, on
             </div>
           </div>
 
-          {/* Action Buttons with Micro-animations */}
+          {/* Action Buttons */}
           <div className="flex items-center gap-1">
             <IconButton
               icon={Search}
-              className={`h-9 w-9 transition-all duration-200 hover:scale-105 hover:bg-muted active:scale-95 ${
-                showSearch ? "text-primary bg-primary/10" : ""
+              className={`h-9 w-9 transition-colors duration-200 ${
+                showSearch ? "text-primary hover:text-primary/80" : "text-muted-foreground hover:text-foreground"
               }`}
-              iconClassName="h-4.5 w-4.5"
+              iconClassName="h-5 w-5"
               onClick={() => {
                 setShowSearch(!showSearch);
                 if (showSearch) setSearchQuery("");
@@ -302,18 +311,18 @@ const MessageContainer = ({ contact, messages = [], onSendMessage, isLoading, on
             />
             <IconButton
               icon={PhoneCall}
-              className="h-9 w-9 transition-all duration-200 hover:scale-105 hover:bg-muted active:scale-95"
-              iconClassName="h-4.5 w-4.5"
+              className="h-9 w-9 text-muted-foreground hover:text-foreground transition-colors duration-200"
+              iconClassName="h-5 w-5"
             />
             <IconButton
               icon={Video}
-              className="h-9 w-9 transition-all duration-200 hover:scale-105 hover:bg-muted active:scale-95"
-              iconClassName="h-4.5 w-4.5"
+              className="h-9 w-9 text-muted-foreground hover:text-foreground transition-colors duration-200"
+              iconClassName="h-5 w-5"
             />
             <IconButton
               icon={EllipsisVertical}
-              className="h-9 w-9 hidden sm:inline-flex transition-all duration-200 hover:scale-105 hover:bg-muted active:scale-95"
-              iconClassName="h-4.5 w-4.5"
+              className="h-9 w-9 hidden sm:inline-flex text-muted-foreground hover:text-foreground transition-colors duration-200"
+              iconClassName="h-5 w-5"
             />
           </div>
         </div>
@@ -328,7 +337,7 @@ const MessageContainer = ({ contact, messages = [], onSendMessage, isLoading, on
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search messages..."
-                className="pl-9 pr-9 bg-muted/60 border-transparent focus-visible:ring-2 focus-visible:ring-emerald-500/20 focus-visible:border-emerald-500 rounded-full h-9 transition-all duration-200"
+                className="pl-9 pr-9 bg-muted/60 border-transparent focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:border-primary rounded-full h-9 transition-all duration-200"
               />
               {searchQuery && (
                 <IconButton
@@ -343,13 +352,13 @@ const MessageContainer = ({ contact, messages = [], onSendMessage, isLoading, on
         )}
       </header>
 
-      {/* Messages Area (Ambient Radial/Mesh Gradients) */}
-      <ScrollArea className="flex-1 min-h-0 bg-radial from-slate-50 via-zinc-100 to-neutral-200 dark:bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] dark:from-slate-900 dark:via-neutral-950 dark:to-black">
+      {/* Messages Area (Translucent viewport showcasing background mesh) */}
+      <ScrollArea className="flex-1 min-h-0 bg-transparent">
         <div className="px-3 py-4 md:p-6 space-y-4">
           {isLoading ? (
             <div className="flex justify-center mt-10">
               <div className="flex flex-col items-center gap-2">
-                <div className="h-6 w-6 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent" />
+                <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
                 <span className="text-muted-foreground text-sm">Loading messages...</span>
               </div>
             </div>
@@ -372,7 +381,7 @@ const MessageContainer = ({ contact, messages = [], onSendMessage, isLoading, on
               return (
                 <div
                   key={messageObj._id}
-                  className={`flex w-full ${isMe ? "justify-end" : "justify-start"} animate-in fade-in duration-200`}
+                  className={`flex w-full ${isMe ? "justify-end" : "justify-start"} animate-in fade-in slide-in-from-bottom-2 duration-300 ease-out`}
                 >
                   <div
                     className={`flex flex-col max-w-[85%] md:max-w-[70%] space-y-1 ${isMe ? "items-end" : "items-start"}`}
@@ -381,8 +390,8 @@ const MessageContainer = ({ contact, messages = [], onSendMessage, isLoading, on
                       <div
                         className={`rounded-2xl px-3 py-2 relative backdrop-blur-sm transition-all duration-200 hover:shadow-sm ${
                           isMe
-                            ? "bg-gradient-to-br from-emerald-500/20 to-teal-600/20 dark:from-emerald-500/30 dark:to-teal-600/30 border border-emerald-500/20 rounded-tr-sm text-foreground"
-                            : "bg-white/50 dark:bg-zinc-800/50 border border-zinc-200/30 dark:border-zinc-700/20 rounded-tl-sm text-foreground"
+                            ? "bg-gradient-to-br from-blue-500/20 to-blue-600/20 border border-blue-500/20 rounded-tr-sm text-foreground"
+                            : "bg-white/50 dark:bg-zinc-900/50 border border-zinc-200/30 dark:border-zinc-800/20 rounded-tl-sm text-foreground"
                         }`}
                       >
                         <p
@@ -403,13 +412,13 @@ const MessageContainer = ({ contact, messages = [], onSendMessage, isLoading, on
                           {isMe && (
                             <span className="flex shrink-0">
                               {(messageObj.status === "sent" || !messageObj.status) && (
-                                <Check className="h-3.5 w-3.5 text-muted-foreground/60" />
+                                <Check className="h-3.5 w-3.5 text-muted-foreground/80" />
                               )}
                               {messageObj.status === "delivered" && (
-                                <CheckCheck className="h-3.5 w-3.5 text-muted-foreground/60" />
+                                <CheckCheck className="h-3.5 w-3.5 text-muted-foreground/80" />
                               )}
                               {messageObj.status === "read" && (
-                                <CheckCheck className="h-3.5 w-3.5 text-emerald-500 dark:text-emerald-400" />
+                                <CheckCheck className="h-3.5 w-3.5 text-sky-500" />
                               )}
                             </span>
                           )}
@@ -419,8 +428,8 @@ const MessageContainer = ({ contact, messages = [], onSendMessage, isLoading, on
                       <div
                         className={`px-3.5 pt-2 pb-1.5 text-[14.5px] shadow-sm relative min-w-[90px] backdrop-blur-sm transition-all duration-200 ${
                           isMe
-                            ? "bg-gradient-to-br from-emerald-600 to-teal-700 dark:from-emerald-800/90 dark:to-teal-950/90 text-white rounded-2xl rounded-tr-sm shadow-md hover:shadow-lg"
-                            : "bg-white/90 dark:bg-zinc-800/90 border border-zinc-200/40 dark:border-zinc-700/20 text-foreground rounded-2xl rounded-tl-sm hover:shadow-md"
+                            ? "bg-gradient-to-br from-blue-600 to-blue-700 text-white rounded-2xl rounded-tr-sm shadow-md hover:shadow-lg"
+                            : "bg-white/90 dark:bg-zinc-900/90 border border-zinc-200/40 dark:border-zinc-800/30 text-foreground rounded-2xl rounded-tl-sm hover:shadow-md"
                         }`}
                       >
                         <div className="whitespace-pre-wrap wrap-break-words leading-[20px] pb-3.5 pr-8">
@@ -433,13 +442,13 @@ const MessageContainer = ({ contact, messages = [], onSendMessage, isLoading, on
                           {isMe && (
                             <span className="flex shrink-0">
                               {(messageObj.status === "sent" || !messageObj.status) && (
-                                <Check className="h-3.5 w-3.5 text-white/60" />
+                                <Check className="h-3.5 w-3.5 text-white/85" />
                               )}
                               {messageObj.status === "delivered" && (
-                                <CheckCheck className="h-3.5 w-3.5 text-white/60" />
+                                <CheckCheck className="h-3.5 w-3.5 text-white/85" />
                               )}
                               {messageObj.status === "read" && (
-                                <CheckCheck className="h-3.5 w-3.5 text-cyan-200" />
+                                <CheckCheck className="h-3.5 w-3.5 text-cyan-300" />
                               )}
                             </span>
                           )}
@@ -456,17 +465,17 @@ const MessageContainer = ({ contact, messages = [], onSendMessage, isLoading, on
           {isTyping && !searchQuery && (
             <div className="flex w-full justify-start animate-in fade-in duration-200">
               <div className="flex flex-col items-start space-y-1">
-                <div className="rounded-2xl rounded-tl-sm px-4 py-3 bg-white/80 dark:bg-zinc-800/80 border border-zinc-200/40 dark:border-zinc-700/20 shadow-sm backdrop-blur-sm flex items-center gap-1.5">
+                <div className="rounded-2xl rounded-tl-sm px-4 py-3 bg-white/90 dark:bg-zinc-900/90 border border-zinc-200/40 dark:border-zinc-800/30 shadow-sm backdrop-blur-sm flex items-center gap-1.5">
                   <span
-                    className="h-1.5 w-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-bounce"
+                    className="h-1.5 w-1.5 rounded-full bg-primary animate-bounce"
                     style={{ animationDelay: "0ms" }}
                   />
                   <span
-                    className="h-1.5 w-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-bounce"
+                    className="h-1.5 w-1.5 rounded-full bg-primary animate-bounce"
                     style={{ animationDelay: "150ms" }}
                   />
                   <span
-                    className="h-1.5 w-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-bounce"
+                    className="h-1.5 w-1.5 rounded-full bg-primary animate-bounce"
                     style={{ animationDelay: "300ms" }}
                   />
                 </div>
@@ -501,46 +510,42 @@ const MessageContainer = ({ contact, messages = [], onSendMessage, isLoading, on
  
         <form
           onSubmit={handleSubmit}
-          className="flex items-center gap-1.5 md:gap-2 w-full max-w-5xl mx-auto rounded-2xl border border-white/20 dark:border-zinc-800/30 bg-white/70 dark:bg-zinc-900/70 backdrop-blur-xl shadow-lg p-2 z-10 transition-all duration-200 focus-within:shadow-xl focus-within:border-emerald-500/30"
+          className="flex items-center gap-2 md:gap-3 w-full max-w-5xl mx-auto p-1 z-10"
         >
-          {/* Toggle emoji picker open/closed with scale and bounce animations */}
           <IconButton
             type="button"
             icon={Smile}
             onClick={() => setShowEmojiPicker((prev) => !prev)}
-            className={`h-10 w-10 shrink-0 rounded-full transition-all duration-200 hover:scale-110 active:scale-95 ${
-              showEmojiPicker ? "text-emerald-500 bg-emerald-500/10" : "hover:bg-muted"
+            className={`h-11 w-11 shrink-0 transition-colors duration-200 ${
+              showEmojiPicker ? "text-primary hover:text-primary/80" : "text-muted-foreground hover:text-foreground"
             }`}
-            iconClassName="h-5.5 w-5.5"
+            iconClassName="h-6 w-6"
           />
 
-          {/* Plus icon rotates 90deg on hover */}
           <IconButton
             type="button"
             icon={Plus}
-            className="h-10 w-10 shrink-0 rounded-full transition-all duration-200 hover:rotate-90 hover:scale-110 hover:bg-muted active:scale-95"
-            iconClassName="h-5 w-5"
+            className="h-11 w-11 shrink-0 text-muted-foreground hover:text-foreground transition-colors duration-200"
+            iconClassName="h-6 w-6"
           />
 
           <Input
             value={inputText}
             onChange={handleInputChange}
             placeholder="Type a message"
-            className="flex-1 bg-muted/40 dark:bg-zinc-800/40 border-transparent focus-visible:ring-1 focus-visible:ring-emerald-500 rounded-xl h-10 px-4 transition-all duration-200 shadow-inner"
+            className="flex-1 !bg-zinc-200/30 dark:!bg-zinc-900/70 !border-zinc-300/30 dark:!border-zinc-800/40 focus-visible:ring-1 focus-visible:ring-primary/50 rounded-2xl h-11 px-4 transition-all duration-200"
           />
 
-          {/* Send icon scales up and translates slightly on hover */}
           <IconButton
             type="submit"
             icon={SendHorizontal}
-            variant="default"
             disabled={!inputText.trim()}
-            className={`h-10 w-10 shrink-0 text-white shadow-sm rounded-full transition-all duration-200 ${
+            className={`h-11 w-11 shrink-0 transition-colors duration-200 ${
               inputText.trim() 
-                ? "bg-emerald-500 hover:bg-emerald-600 hover:scale-105 hover:translate-x-0.5 active:scale-95" 
-                : "bg-muted text-muted-foreground opacity-50 cursor-not-allowed"
+                ? "text-primary hover:text-primary/80 cursor-pointer" 
+                : "text-muted-foreground/45 cursor-not-allowed"
             }`}
-            iconClassName="h-4.5 w-4.5 ml-0.5"
+            iconClassName="h-5.5 w-5.5 ml-0.5"
           />
         </form>
       </footer>
@@ -548,4 +553,4 @@ const MessageContainer = ({ contact, messages = [], onSendMessage, isLoading, on
   );
 };
 
-export default MessageContainer;
+export default memo(MessageContainer);

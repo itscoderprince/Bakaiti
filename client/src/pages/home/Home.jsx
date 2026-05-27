@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import UserSidebar from "./UserSidebar";
 import MessageContainer from "./MessageContainer";
@@ -16,7 +16,7 @@ const Home = () => {
 
   const [activeContactId, setActiveContactId] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [theme, setTheme] = useState("light");
+  const [theme, setTheme] = useState("dark");
 
   // Fetch messages using our custom hook
   const { messages, isMessagesLoading } = useGetMessages(activeContactId);
@@ -29,7 +29,19 @@ const Home = () => {
     dispatch(getOtherUsersThunk());
   }, [dispatch]);
 
+  const handleSendMessage = useCallback(async (text) => {
+    if (!text.trim() || !activeContactId) return;
+    await sendMessage(activeContactId, { message: text });
+  }, [activeContactId, sendMessage]);
 
+  const activeContact = useMemo(() => {
+    return otherUsers?.find((c) => c._id === activeContactId) || null;
+  }, [otherUsers, activeContactId]);
+
+  const contactProps = useMemo(() => {
+    if (!activeContact) return null;
+    return { ...activeContact, name: activeContact.fullname };
+  }, [activeContact]);
 
   // Handle dark mode side effects
   useEffect(() => {
@@ -41,24 +53,21 @@ const Home = () => {
     }
   }, [theme]);
 
-  const toggleTheme = () => {
+  const toggleTheme = useCallback(() => {
     setTheme((prev) => (prev === "light" ? "dark" : "light"));
-  };
+  }, []);
 
-  // Unread clearing logic is skipped for now since real unread logic isn't implemented
-  // useEffect(() => { ... }, [activeContactId]);
-
-  const handleSendMessage = async (text) => {
-    if (!text.trim() || !activeContactId) return;
-    await sendMessage(activeContactId, { message: text });
-  };
-
-  const activeContact = otherUsers?.find((c) => c._id === activeContactId);
-  const contactProps = activeContact ? { ...activeContact, name: activeContact.fullname } : null;
+  const handleBack = useCallback(() => {
+    setActiveContactId(null);
+  }, []);
 
   return (
-    <SidebarProvider className="h-dvh w-screen overflow-hidden">
-      <div className="flex h-full w-full overflow-hidden bg-background text-foreground">
+    <SidebarProvider className="h-dvh w-screen overflow-hidden bg-radial from-slate-50 via-zinc-100 to-neutral-200 dark:bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] dark:from-slate-900 dark:via-neutral-950 dark:to-black">
+      <div className="flex h-full w-full overflow-hidden p-0 md:p-3 md:gap-3 relative z-10 text-foreground">
+        {/* Ambient background glows */}
+        <div className="absolute top-1/4 left-1/4 w-72 h-72 rounded-full bg-blue-500/10 blur-3xl animate-pulse pointer-events-none" style={{ animationDuration: "8s" }} />
+        <div className="absolute bottom-1/4 right-1/4 w-80 h-80 rounded-full bg-indigo-500/10 blur-3xl animate-pulse pointer-events-none" style={{ animationDuration: "12s" }} />
+
         <UserSidebar
           activeContactId={activeContactId}
           setActiveContactId={setActiveContactId}
@@ -72,7 +81,7 @@ const Home = () => {
           messages={messages}
           onSendMessage={handleSendMessage}
           isLoading={isMessagesLoading}
-          onBack={() => setActiveContactId(null)}
+          onBack={handleBack}
         />
       </div>
     </SidebarProvider>

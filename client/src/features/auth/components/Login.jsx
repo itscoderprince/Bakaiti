@@ -21,16 +21,28 @@ const Login = () => {
   } = form;
 
   return (
-    <div className="flex min-h-svh flex-col items-center justify-center gap-6 bg-muted p-6 md:p-10">
-      <div className="flex w-full max-w-md flex-col gap-6">
+    <div className="flex min-h-svh flex-col items-center justify-center bg-radial from-slate-50 via-zinc-100 to-neutral-200 dark:bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] dark:from-slate-900 dark:via-neutral-950 dark:to-black p-6 md:p-10 relative overflow-hidden">
+      {/* Ambient background glows */}
+      <div
+        className="absolute top-1/4 left-1/4 w-72 h-72 rounded-full bg-blue-500/10 blur-3xl animate-pulse"
+        style={{ animationDuration: "8s" }}
+      />
+      <div
+        className="absolute bottom-1/4 right-1/4 w-80 h-80 rounded-full bg-indigo-500/10 blur-3xl animate-pulse"
+        style={{ animationDuration: "12s" }}
+      />
+
+      <div className="flex w-full max-w-md flex-col gap-6 relative z-10">
         <Card>
           <CardHeader className="text-center">
-            <CardTitle className="text-xl">Welcome back</CardTitle>
+            <CardTitle className="text-xl font-bold tracking-tight">
+              Welcome back
+            </CardTitle>
             <CardDescription>Login to continue chatting</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={onSubmit}>
-              <div className="grid gap-6">
+              <div className="grid gap-4">
                 <div className="grid gap-2">
                   <Label htmlFor="username" className="flex items-center gap-2">
                     <User size={14} className="text-muted-foreground" />
@@ -43,7 +55,9 @@ const Login = () => {
                     {...register("username")}
                   />
                   {errors.username && (
-                    <p className="text-xs text-red-500">{errors.username.message}</p>
+                    <p className="text-xs text-red-500">
+                      {errors.username.message}
+                    </p>
                   )}
                 </div>
 
@@ -63,16 +77,19 @@ const Login = () => {
                       Forgot your password?
                     </Link>
                   </div>
-                  <PasswordInput
-                    id="password"
-                    {...register("password")}
-                  />
+                  <PasswordInput id="password" {...register("password")} />
                   {errors.password && (
-                    <p className="text-xs text-red-500">{errors.password.message}</p>
+                    <p className="text-xs text-red-500">
+                      {errors.password.message}
+                    </p>
                   )}
                 </div>
 
-                <Button type="submit" className="w-full" disabled={isLoading}>
+                <Button
+                  type="submit"
+                  className="w-full rounded-xl mt-2"
+                  disabled={isLoading}
+                >
                   {isLoading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />

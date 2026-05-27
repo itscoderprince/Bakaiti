@@ -150,3 +150,21 @@ export const changePasswordThunk = createAsyncThunk(
     }
   }
 );
+
+/**
+ * Thunk to update user profile information.
+ */
+export const updateProfileThunk = createAsyncThunk(
+  "auth/updateProfile",
+  async (profileData, { rejectWithValue }) => {
+    try {
+      const data = await authApi.updateProfile(profileData);
+      toast.success(data.message || "Profile updated successfully!");
+      return data.data; // Contains updated user
+    } catch (error) {
+      const errorMsg = error.response?.data?.message || error.message || "Failed to update profile";
+      toast.error(errorMsg);
+      return rejectWithValue(errorMsg);
+    }
+  }
+);

@@ -238,3 +238,39 @@ export const changePassword = asyncHandler(async (req, res, next) => {
 
   res.status(200).json(new ApiResponse(200, null, "Password updated successfully!"));
 });
+
+// Update Profile
+export const updateProfile = asyncHandler(async (req, res, next) => {
+  const { fullname, username, email, profilePic, gender, bio } = req.body;
+  const user = req.user; // populated by auth middleware
+
+  if (username && username !== user.username) {
+    const usernameExists = await User.findOne({ username });
+    if (usernameExists) {
+      return next(new AppError(400, "Username already exists"));
+    }
+    user.username = username;
+  }
+
+  if (email && email !== user.email) {
+    const emailExists = await User.findOne({ email });
+    if (emailExists) {
+      return next(new AppError(400, "Email already exists"));
+    }
+    user.email = email;
+  }
+
+  if (fullname) user.fullname = fullname;
+  if (gender) user.gender = gender;
+  if (bio !== undefined) user.bio = bio;
+  if (profilePic !== undefined) user.profilePic = profilePic;
+
+  await user.save();
+
+  // Return the updated user (without password)
+  const updatedUser = await User.findById(user._id).select("-password");
+
+  res.status(200).json(
+    new ApiResponse(200, updatedUser, "Profile updated successfully!")
+  );
+});

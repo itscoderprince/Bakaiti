@@ -55,8 +55,8 @@
     --card-foreground: oklch(0.145 0 0);
     --popover: oklch(1 0 0);
     --popover-foreground: oklch(0.145 0 0);
-    --primary: oklch(0.514 0.222 16.935);
-    --primary-foreground: oklch(0.969 0.015 12.422);
+    --primary: oklch(0.60 0.18 250);
+    --primary-foreground: oklch(0.985 0 0);
     --secondary: oklch(0.967 0.001 286.375);
     --secondary-foreground: oklch(0.21 0.006 285.885);
     --muted: oklch(0.97 0 0);
@@ -66,7 +66,7 @@
     --destructive: oklch(0.577 0.245 27.325);
     --border: oklch(0.922 0 0);
     --input: oklch(0.922 0 0);
-    --ring: oklch(0.708 0 0);
+    --ring: oklch(0.60 0.18 250);
     --chart-1: oklch(0.87 0 0);
     --chart-2: oklch(0.556 0 0);
     --chart-3: oklch(0.439 0 0);
@@ -75,12 +75,12 @@
     --radius: 0.625rem;
     --sidebar: oklch(0.985 0 0);
     --sidebar-foreground: oklch(0.145 0 0);
-    --sidebar-primary: oklch(0.586 0.253 17.585);
-    --sidebar-primary-foreground: oklch(0.969 0.015 12.422);
+    --sidebar-primary: oklch(0.60 0.18 250);
+    --sidebar-primary-foreground: oklch(0.985 0 0);
     --sidebar-accent: oklch(0.97 0 0);
     --sidebar-accent-foreground: oklch(0.205 0 0);
     --sidebar-border: oklch(0.922 0 0);
-    --sidebar-ring: oklch(0.708 0 0);
+    --sidebar-ring: oklch(0.60 0.18 250);
 }
 
 .dark {
@@ -90,8 +90,8 @@
     --card-foreground: oklch(0.985 0 0);
     --popover: oklch(0.205 0 0);
     --popover-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.455 0.188 13.697);
-    --primary-foreground: oklch(0.969 0.015 12.422);
+    --primary: oklch(0.58 0.18 250);
+    --primary-foreground: oklch(0.985 0 0);
     --secondary: oklch(0.274 0.006 286.033);
     --secondary-foreground: oklch(0.985 0 0);
     --muted: oklch(0.269 0 0);
@@ -101,7 +101,7 @@
     --destructive: oklch(0.704 0.191 22.216);
     --border: oklch(1 0 0 / 10%);
     --input: oklch(1 0 0 / 15%);
-    --ring: oklch(0.556 0 0);
+    --ring: oklch(0.58 0.18 250);
     --chart-1: oklch(0.87 0 0);
     --chart-2: oklch(0.556 0 0);
     --chart-3: oklch(0.439 0 0);
@@ -109,12 +109,12 @@
     --chart-5: oklch(0.269 0 0);
     --sidebar: oklch(0.21 0.006 285.885);
     --sidebar-foreground: oklch(0.985 0 0);
-    --sidebar-primary: oklch(0.645 0.246 16.439);
-    --sidebar-primary-foreground: oklch(0.969 0.015 12.422);
+    --sidebar-primary: oklch(0.58 0.18 250);
+    --sidebar-primary-foreground: oklch(0.985 0 0);
     --sidebar-accent: oklch(0.269 0 0);
     --sidebar-accent-foreground: oklch(0.985 0 0);
     --sidebar-border: oklch(1 0 0 / 10%);
-    --sidebar-ring: oklch(0.556 0 0);
+    --sidebar-ring: oklch(0.58 0.18 250);
 }
 
 @layer base {
@@ -127,4 +127,157 @@
   html {
     @apply font-sans;
     }
+}
+
+/* Premium Apple Sonoma-Style Glassmorphism & Card Spacing Overrides */
+[data-slot="card"],
+[data-slot="sidebar-inner"],
+[data-slot="sheet-content"],
+[data-slot="dropdown-menu-content"],
+[data-slot="dropdown-menu-sub-content"],
+[data-slot="select-content"] {
+  /* High-fidelity Apple-style backdrop filter blur & saturation */
+  backdrop-filter: blur(30px) saturate(160%) !important;
+  -webkit-backdrop-filter: blur(30px) saturate(160%) !important;
+  
+  /* Very subtle translucent white border for Sonoma glass edge light reflections */
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  
+  /* Dark, frosted Apple glass canvas background */
+  background: rgba(22, 22, 22, 0.45) !important;
+  
+  /* Deep diffuse shadow overlay for clean floating depth */
+  box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.5) !important;
+}
+
+/* Card Specific spacing & gaps */
+[data-slot="card"] {
+  padding-top: 1rem !important;       /* py-4 instead of py-6 */
+  padding-bottom: 1rem !important;    /* py-4 instead of py-6 */
+  gap: 0.75rem !important;            /* gap-3 instead of gap-6 */
+}
+
+/* Sidebar Specific overrides */
+[data-slot="sidebar-inner"] {
+  background: rgba(18, 18, 18, 0.45) !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.07) !important;
+  box-shadow: none !important;
+}
+
+/* Sheet Specific overrides */
+[data-slot="sheet-content"] {
+  background: rgba(20, 20, 20, 0.55) !important;
+  border-left: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Dropdown Specific overrides */
+[data-slot="dropdown-menu-content"],
+[data-slot="dropdown-menu-sub-content"],
+[data-slot="select-content"] {
+  background: rgba(25, 25, 25, 0.65) !important;
+  box-shadow: 0 10px 45px -10px rgba(0, 0, 0, 0.6) !important;
+}
+
+/* Card layout inner padding refinements */
+[data-slot="card-header"] {
+  padding-left: 1.25rem !important;
+  padding-right: 1.25rem !important;
+  padding-bottom: 0.25rem !important;
+}
+
+[data-slot="card-content"] {
+  padding-left: 1.25rem !important;
+  padding-right: 1.25rem !important;
+  padding-top: 0.25rem !important;
+}
+
+[data-slot="card-footer"] {
+  padding-left: 1.25rem !important;
+  padding-right: 1.25rem !important;
+  padding-top: 0.25rem !important;
+}
+
+/* Global spacing adjustments for form grids inside cards */
+[data-slot="card"] form .grid.gap-4 {
+  gap: 0.875rem !important; /* Tighter field-to-field spacing */
+}
+
+[data-slot="card"] form .grid.gap-2 {
+  gap: 0.375rem !important; /* Tighter label-to-input vertical spacing */
+}
+
+/* Global Optimized Glassmorphism for Inputs & Select Triggers */
+[data-slot="input"], [data-slot="select-trigger"] {
+  background: rgba(255, 255, 255, 0.03) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+  transition: all 0.2s ease-in-out !important;
+}
+
+/* Focus and active state animations for glassy inputs */
+[data-slot="input"]:focus-visible, [data-slot="select-trigger"]:focus-visible {
+  background: rgba(255, 255, 255, 0.06) !important;
+  border-color: var(--color-ring) !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25) !important;
+}
+
+/* Ensure Sidebar element itself has transparent background on desktop */
+@media (min-width: 768px) {
+  [data-slot="sidebar-container"] {
+    background: transparent !important;
+  }
+}
+
+/* Glassy Apple-style Primary Buttons */
+[data-slot="button"]:not([data-variant="ghost"]):not([data-variant="outline"]):not([data-variant="link"]):not([data-variant="destructive"]) {
+  background: rgba(59, 130, 246, 0.12) !important;
+  border: 1px solid rgba(59, 130, 246, 0.3) !important;
+  color: oklch(0.75 0.12 250) !important; /* soft royal blue text */
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+  transition: all 0.2s ease-in-out !important;
+  box-shadow: none !important;
+}
+
+[data-slot="button"]:not([data-variant="ghost"]):not([data-variant="outline"]):not([data-variant="link"]):not([data-variant="destructive"]):hover {
+  background: rgba(59, 130, 246, 0.22) !important;
+  border-color: rgba(59, 130, 246, 0.45) !important;
+  color: #fff !important;
+  box-shadow: none !important;
+  transform: translateY(-0.5px) !important;
+}
+
+[data-slot="button"]:not([data-variant="ghost"]):not([data-variant="outline"]):not([data-variant="link"]):not([data-variant="destructive"]):active {
+  transform: translateY(1px) !important;
+}
+
+[data-slot="button"]:not([data-variant="ghost"]):not([data-variant="outline"]):not([data-variant="link"]):not([data-variant="destructive"]):disabled {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border-color: rgba(255, 255, 255, 0.04) !important;
+  color: rgba(255, 255, 255, 0.2) !important;
+  box-shadow: none !important;
+  cursor: not-allowed !important;
+  opacity: 0.5 !important;
+}
+
+/* Solid Submit Buttons inside Forms (Login/Signup/Settings) */
+form [data-slot="button"][type="submit"]:not([data-variant="ghost"]):not([data-variant="outline"]):not([data-variant="link"]):not([data-variant="destructive"]) {
+  background: var(--color-primary) !important;
+  border: 1px solid var(--color-primary) !important;
+  color: var(--color-primary-foreground) !important;
+  box-shadow: none !important;
+  opacity: 1 !important;
+}
+
+form [data-slot="button"][type="submit"]:not([data-variant="ghost"]):not([data-variant="outline"]):not([data-variant="link"]):not([data-variant="destructive"]):hover {
+  background: oklch(0.52 0.18 250) !important; /* Slightly darker Royal Blue hover */
+  border-color: oklch(0.52 0.18 250) !important;
+  color: #fff !important;
+  box-shadow: none !important;
+  transform: translateY(-0.5px) !important;
+}
+
+form [data-slot="button"][type="submit"]:not([data-variant="ghost"]):not([data-variant="outline"]):not([data-variant="link"]):not([data-variant="destructive"]):active {
+  transform: translateY(1px) !important;
 }

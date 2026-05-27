@@ -1,5 +1,5 @@
 import { createSlice } from "@reduxjs/toolkit";
-import { loginUserThunk, signupUserThunk, logoutUserThunk, checkAuthThunk, getOtherUsersThunk } from "./auth.thunks.js";
+import { loginUserThunk, signupUserThunk, logoutUserThunk, checkAuthThunk, getOtherUsersThunk, updateProfileThunk } from "./auth.thunks.js";
 
 /**
  * Initial state configuration for the authentication slice.
@@ -119,6 +119,20 @@ const authSlice = createSlice({
         state.otherUsers = action.payload; // Payload should be the array of users
       })
       .addCase(getOtherUsersThunk.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload;
+      })
+
+      // For Update Profile
+      .addCase(updateProfileThunk.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(updateProfileThunk.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.user = action.payload || state.user;
+      })
+      .addCase(updateProfileThunk.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload;
       });

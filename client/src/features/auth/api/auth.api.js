@@ -82,5 +82,15 @@ export const authApi = {
   changePassword: async (passwordData) => {
     const response = await axiosInstance.post("/user/change-password", passwordData);
     return response.data;
+  },
+
+  /**
+   * Updates the profile of currently authenticated user.
+   * @param {Object} profileData - { fullname, username, email, gender, bio, profilePic }
+   * @returns {Promise<Object>}
+   */
+  updateProfile: async (profileData) => {
+    const response = await axiosInstance.put("/user/update-profile", profileData);
+    return response.data;
   }
 };
