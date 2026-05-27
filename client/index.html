@@ -3,9 +3,21 @@
 
 <head>
   <meta charset="UTF-8" />
-  <link rel="icon" type="image/png" href="/logo.webp" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>backChodi</title>
+
+  <!-- SEO & Social -->
+  <title>BackChodi — Real-Time Chat</title>
+  <meta name="description" content="BackChodi is a lightning-fast, real-time chat app with message status ticks, typing indicators, and a beautiful dark UI." />
+  <meta name="theme-color" content="#09090b" />
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/webp" href="/logo.webp" />
+
+  <!-- ─── Critical Resource Hints ─────────────────────────────────────────── -->
+  <!-- Preconnect to the API/socket server so the TCP handshake is done before
+       JS fires the first network request — shaves ~150ms off FCP/LCP -->
+  <link rel="preconnect" href="http://localhost:5000" />
+  <link rel="dns-prefetch" href="http://localhost:5000" />
 </head>
 
 <body>
