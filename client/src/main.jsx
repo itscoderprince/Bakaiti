@@ -11,14 +11,18 @@ import ProtectedRoute from "./components/ProtectedRoute.jsx";
 import PublicRoute from "./components/PublicRoute.jsx";
 
 // Lazy loaded page components for optimal bundle chunking
+const NavigationLayout = lazy(() => import("./components/NavigationLayout.jsx"));
 const Home = lazy(() => import("./pages/home/Home.jsx"));
+const Feed = lazy(() => import("./pages/feed/Feed.jsx"));
+const Reels = lazy(() => import("./pages/reels/Reels.jsx"));
+const Profile = lazy(() => import("./pages/profile/Profile.jsx"));
 const Login = lazy(() => import("./features/auth/components/Login.jsx"));
 const Signup = lazy(() => import("./features/auth/components/Signup.jsx"));
-const ForgotPassword = lazy(
-  () => import("./features/auth/components/ForgotPassword.jsx"),
+const ForgotPassword = lazy(() =>
+  import("./features/auth/components/ForgotPassword.jsx")
 );
-const ResetPassword = lazy(
-  () => import("./features/auth/components/ResetPassword.jsx"),
+const ResetPassword = lazy(() =>
+  import("./features/auth/components/ResetPassword.jsx")
 );
 
 const router = createBrowserRouter([
@@ -27,14 +31,56 @@ const router = createBrowserRouter([
     element: <App />,
     children: [
       {
-        index: true,
+        path: "/",
         element: (
           <ProtectedRoute>
             <Suspense fallback={null}>
-              <Home />
+              <NavigationLayout />
             </Suspense>
           </ProtectedRoute>
         ),
+        children: [
+          {
+            index: true,
+            element: (
+              <Suspense fallback={null}>
+                <Home />
+              </Suspense>
+            ),
+          },
+          {
+            path: "feed",
+            element: (
+              <Suspense fallback={null}>
+                <Feed />
+              </Suspense>
+            ),
+          },
+          {
+            path: "reels",
+            element: (
+              <Suspense fallback={null}>
+                <Reels />
+              </Suspense>
+            ),
+          },
+          {
+            path: "profile",
+            element: (
+              <Suspense fallback={null}>
+                <Profile />
+              </Suspense>
+            ),
+          },
+          {
+            path: "profile/:userId",
+            element: (
+              <Suspense fallback={null}>
+                <Profile />
+              </Suspense>
+            ),
+          },
+        ],
       },
       {
         path: "login",
@@ -86,5 +132,5 @@ createRoot(document.getElementById("root")).render(
       <RouterProvider router={router} />
       <Toaster position="top-right" reverseOrder={false} />
     </TooltipProvider>
-  </Provider>,
+  </Provider>
 );

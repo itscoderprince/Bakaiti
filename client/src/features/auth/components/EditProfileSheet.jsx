@@ -5,6 +5,7 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { updateProfileThunk } from "../store/auth.thunks.js";
 import { User, Mail, Camera, Loader2, Save, BadgeHelp, Quote } from "lucide-react";
+import { getOptimizedMediaUrl } from "../../../utils/cloudinary.js";
 import {
   Sheet,
   SheetContent,
@@ -144,7 +145,7 @@ const EditProfileSheet = ({ open, onOpenChange }) => {
             >
               {profilePicBase64 ? (
                 <img
-                  src={profilePicBase64}
+                  src={getOptimizedMediaUrl(profilePicBase64, { width: 192, height: 192, gravity: "face" })}
                   alt="Profile Preview"
                   className="h-full w-full object-cover"
                 />

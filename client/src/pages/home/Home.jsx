@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
+import { useLocation } from "react-router-dom";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import UserSidebar from "./UserSidebar";
 import MessageContainer from "./MessageContainer";
@@ -13,11 +14,21 @@ import { useListenMessages } from "../../features/messages/hooks/useListenMessag
 
 const Home = () => {
   const dispatch = useDispatch();
+  const location = useLocation();
   const { otherUsers } = useSelector((state) => state.auth);
 
   const [activeContactId, setActiveContactId] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [theme, setTheme] = useState("dark");
+
+  // Sync selected contact from routing state (e.g. redirected from Profile page)
+  useEffect(() => {
+    if (location.state?.selectContactId) {
+      setActiveContactId(location.state.selectContactId);
+      // Clean history state atomically to avoid selection loop on reload/back
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
 
   // Fetch messages using our custom hook
   const {
@@ -76,7 +87,7 @@ const Home = () => {
   }, []);
 
   return (
-    <SidebarProvider className="h-dvh w-screen overflow-hidden bg-radial from-slate-50 via-zinc-100 to-neutral-200 dark:bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] dark:from-slate-900 dark:via-neutral-950 dark:to-black">
+    <SidebarProvider className="h-full w-full overflow-hidden bg-transparent">
       <div className="flex h-full w-full overflow-hidden p-0 md:p-3 md:gap-3 relative z-10 text-foreground">
         {/* Ambient background glows */}
         <div className="absolute top-1/4 left-1/4 w-72 h-72 rounded-full bg-blue-500/10 blur-3xl animate-pulse pointer-events-none" style={{ animationDuration: "8s" }} />

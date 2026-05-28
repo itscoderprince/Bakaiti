@@ -7,6 +7,7 @@ import { generateTokenAndSetCookie } from "../utils/generateToken.js";
 import { config } from "../config/env.js";
 import crypto from "crypto";
 import { sendEmail } from "../utils/sendEmail.js";
+import { uploadToCloudinary } from "../utils/cloudinary.js";
 
 // Register
 export const register = asyncHandler(async (req, res, next) => {
@@ -18,13 +19,23 @@ export const register = asyncHandler(async (req, res, next) => {
     return next(new AppError(400, "Username or email already exists"));
   }
 
+  const profilePicUrl = req.body.profilePic
+    ? await uploadToCloudinary(req.body.profilePic, "image", {
+        transformation: [
+          { width: 250, height: 250, crop: "fill", gravity: "face" },
+          { quality: "auto" },
+          { fetch_format: "auto" }
+        ]
+      })
+    : "";
+
   const newUser = await User.create({
     fullname,
     username,
     email,
     password,
     gender,
-    profilePic: req.body.profilePic || "",
+    profilePic: profilePicUrl,
   });
 
   // Generate JWT token and set it in HTTP-only cookie
@@ -286,7 +297,15 @@ export const updateProfile = asyncHandler(async (req, res, next) => {
   if (fullname) user.fullname = fullname;
   if (gender) user.gender = gender;
   if (bio !== undefined) user.bio = bio;
-  if (profilePic !== undefined) user.profilePic = profilePic;
+  if (profilePic !== undefined) {
+    user.profilePic = await uploadToCloudinary(profilePic, "image", {
+      transformation: [
+        { width: 250, height: 250, crop: "fill", gravity: "face" },
+        { quality: "auto" },
+        { fetch_format: "auto" }
+      ]
+    });
+  }
 
   await user.save();
 

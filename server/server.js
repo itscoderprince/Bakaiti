@@ -3,6 +3,7 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import userRoute from "./routes/user.route.js";
 import messageRoute from "./routes/message.route.js";
+import postRoute from "./routes/post.route.js";
 import { Connection } from "./db/Connection.js";
 import { errorHandler } from "./middlewares/error.middleware.js";
 import { config } from "./config/env.js";
@@ -17,7 +18,8 @@ const corsOptions = {
 
 // Middleware
 app.use(cors(corsOptions));
-app.use(express.json());
+app.use(express.json({ limit: "15mb" }));
+app.use(express.urlencoded({ limit: "15mb", extended: true }));
 app.use(cookieParser());
 
 // Database connection
@@ -31,6 +33,7 @@ app.get("/", (req, res) => {
 });
 app.use("/api/v1/user", userRoute);
 app.use("/api/v1/message", messageRoute);
+app.use("/api/v1/post", postRoute);
 
 // Global Error Handler Middleware
 app.use(errorHandler);

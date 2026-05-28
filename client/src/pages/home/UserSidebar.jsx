@@ -1,7 +1,12 @@
-import { useMemo, memo } from "react";
-import { useSelector } from "react-redux";
-import { Search } from "lucide-react";
+import { useMemo, memo, useState } from "react";
+import { useSelector, useDispatch } from "react-redux";
+import { useNavigate } from "react-router-dom";
+import { Search, EllipsisVertical, CircleUser, Settings2, LogOut } from "lucide-react";
 import UserAccountFooter from "../../features/auth/components/UserAccountFooter.jsx";
+import ChangePasswordSheet from "../../features/auth/components/ChangePasswordSheet.jsx";
+import EditProfileSheet from "../../features/auth/components/EditProfileSheet.jsx";
+import { getOptimizedMediaUrl } from "../../utils/cloudinary.js";
+import { logoutUserThunk } from "../../features/auth/store/auth.thunks.js";
 import {
   Sidebar,
   SidebarContent,
@@ -14,6 +19,12 @@ import {
   SidebarGroupLabel,
   SidebarMenu,
 } from "@/components/ui/sidebar";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
 
 const UserSidebar = ({
   activeContactId,
@@ -23,9 +34,22 @@ const UserSidebar = ({
   theme,
   toggleTheme,
 }) => {
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
   const { otherUsers } = useSelector((store) => store.auth);
   const { onlineUsers } = useSelector((store) => store.shocket);
   const { lastMessageTimes } = useSelector((store) => store.messages);
+
+  const handleLogout = async () => {
+    try {
+      await dispatch(logoutUserThunk()).unwrap();
+      navigate("/login");
+    } catch (error) {
+      console.error("Logout failed:", error);
+    }
+  };
 
   // 1. Filter and sort contacts based on search query and message history (memoized)
   const sortedUsers = useMemo(() => {
@@ -65,6 +89,41 @@ const UserSidebar = ({
               <span className="font-semibold text-lg tracking-tight">
                 BackChodi
               </span>
+            </div>
+
+            {/* Mobile-only 3-dot dropdown menu */}
+            <div className="md:hidden">
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  className="h-8 w-8 flex items-center justify-center rounded-full hover:bg-white/10 dark:hover:bg-zinc-900/30 text-muted-foreground hover:text-foreground transition-all duration-200 cursor-pointer"
+                  render={<button aria-label="Mobile settings" />}
+                >
+                  <EllipsisVertical className="h-4.5 w-4.5" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-52">
+                  <DropdownMenuItem
+                    onClick={() => setIsProfileOpen(true)}
+                    className="cursor-pointer gap-2"
+                  >
+                    <CircleUser className="h-4 w-4" />
+                    Profile Details
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => setIsSettingsOpen(true)}
+                    className="cursor-pointer gap-2"
+                  >
+                    <Settings2 className="h-4 w-4" />
+                    Settings
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={handleLogout}
+                    className="cursor-pointer text-destructive focus:bg-destructive/10 focus:text-destructive gap-2"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    Log Out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
 
@@ -124,7 +183,7 @@ const UserSidebar = ({
                             <div className="relative shrink-0">
                               {user.profilePic ? (
                                 <img
-                                  src={user.profilePic}
+                                  src={getOptimizedMediaUrl(user.profilePic, { width: 72, height: 72, gravity: "face" })}
                                   alt={user.fullname}
                                   className="flex h-9 w-9 object-cover items-center justify-center rounded-full shadow-md border border-border/10"
                                 />
@@ -167,8 +226,12 @@ const UserSidebar = ({
         </SidebarContent>
 
         {/* Sidebar Footer */}
-        <UserAccountFooter theme={theme} toggleTheme={toggleTheme} />
+        <div className="hidden md:block">
+          <UserAccountFooter theme={theme} toggleTheme={toggleTheme} />
+        </div>
       </Sidebar>
+      <ChangePasswordSheet open={isSettingsOpen} onOpenChange={setIsSettingsOpen} />
+      <EditProfileSheet open={isProfileOpen} onOpenChange={setIsProfileOpen} />
     </>
   );
 };

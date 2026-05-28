@@ -4,6 +4,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { logoutUserThunk } from "../store/auth.thunks.js";
 import ChangePasswordSheet from "./ChangePasswordSheet.jsx";
 import EditProfileSheet from "./EditProfileSheet.jsx";
+import { getOptimizedMediaUrl } from "../../../utils/cloudinary.js";
 import {
   SidebarFooter,
   SidebarMenu,
@@ -60,7 +61,7 @@ const UserAccountFooter = ({ theme, toggleTheme }) => {
                   <div className="relative shrink-0">
                     {currentUser?.profilePic ? (
                       <img
-                        src={currentUser.profilePic}
+                        src={getOptimizedMediaUrl(currentUser.profilePic, { width: 64, height: 64, gravity: "face" })}
                         alt={currentUser.fullname}
                         className="flex h-8 w-8 object-cover items-center justify-center rounded-full shadow-sm border border-border/10"
                       />

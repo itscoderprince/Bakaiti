@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { IconButton } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { getSocket } from "../../features/shocket/store/shocket.slice.js";
+import { getOptimizedMediaUrl } from "../../utils/cloudinary.js";
 import {
   Search,
   PhoneCall,
@@ -465,7 +466,7 @@ const MessageContainer = ({
 
   if (!contact) {
     return (
-      <div className="flex flex-1 flex-col items-center justify-start pt-20 bg-white/40 dark:bg-zinc-950/40 backdrop-blur-xl border-l md:border border-white/20 dark:border-zinc-800/30 md:rounded-2xl md:shadow-lg p-8 text-center h-full relative overflow-hidden">
+      <div className="hidden md:flex flex-1 flex-col items-center justify-start pt-20 bg-white/40 dark:bg-zinc-950/40 backdrop-blur-xl border-l md:border border-white/20 dark:border-zinc-800/30 md:rounded-2xl md:shadow-lg p-8 text-center h-full relative overflow-hidden">
         <div className="max-w-md space-y-6 relative z-10 p-8 rounded-3xl border border-white/25 dark:border-zinc-800/30 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-xl shadow-xl transition-all duration-300 hover:shadow-2xl">
           <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-tr from-primary to-primary/80 text-white shadow-lg shadow-primary/20 mb-6 animate-bounce">
             <MessageSquareCode className="h-10 w-10" />
@@ -517,7 +518,7 @@ const MessageContainer = ({
             <div className="relative shrink-0">
               {contact.profilePic ? (
                 <img
-                  src={contact.profilePic}
+                  src={getOptimizedMediaUrl(contact.profilePic, { width: 72, height: 72, gravity: "face" })}
                   alt={contact.name}
                   className="flex h-9 w-9 object-cover items-center justify-center rounded-full shadow-sm"
                 />

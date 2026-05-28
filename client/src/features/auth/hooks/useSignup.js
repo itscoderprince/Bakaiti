@@ -16,12 +16,24 @@ export const useSignup = () => {
 
   const onSubmit = async (data) => {
     try {
+      let profilePicBase64 = "";
+      if (data.profilePic && data.profilePic.length > 0) {
+        const file = data.profilePic[0];
+        profilePicBase64 = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+      }
+
       const payload = {
         fullname: data.fullname,
         username: data.username,
         email: data.email,
         password: data.password,
         gender: data.gender,
+        profilePic: profilePicBase64,
       };
 
       await dispatch(signupUserThunk(payload)).unwrap();
