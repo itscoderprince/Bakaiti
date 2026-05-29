@@ -9,11 +9,9 @@ import { Outlet } from "react-router-dom";
 // Minimal skeleton shown only during the initial auth hydration check
 // so users see the app background immediately instead of a blank screen.
 const AuthCheckingSkeleton = () => (
-  <div className="h-dvh w-screen flex flex-col items-center justify-between bg-zinc-950 text-white p-8 relative overflow-hidden select-none">
+  <div className="h-dvh w-screen flex flex-col items-center justify-center bg-zinc-950 text-white p-8 relative overflow-hidden select-none">
     {/* Ambient glow */}
     <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[350px] h-[350px] rounded-full bg-blue-500/5 blur-3xl pointer-events-none" />
-
-    <div /> {/* Spacer */}
 
     {/* Center content */}
     <div className="flex flex-col items-center gap-6 relative z-10">
@@ -36,7 +34,7 @@ const AuthCheckingSkeleton = () => (
     </div>
 
     {/* Bottom security footer */}
-    <div className="flex flex-col items-center gap-1.5 mt-auto opacity-60">
+    <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1.5 opacity-60">
       <div className="flex items-center gap-1.5 text-xs text-zinc-400">
         <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 text-blue-500" fill="none" stroke="currentColor" strokeWidth="2">
           <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
