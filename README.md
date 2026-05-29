@@ -1,4 +1,4 @@
-# 💬 BackChodi — Production-Grade Real-Time Chat Platform
+# 💬 Vaanix — Production-Grade Real-Time Social & Chat Platform
 
 [![Node.js](https://img.shields.io/badge/Node.js-v20+-339933?style=flat-square&logo=nodedotjs&logoColor=white)](https://nodejs.org/)
 [![React](https://img.shields.io/badge/React-v19-61DAFB?style=flat-square&logo=react&logoColor=black)](https://react.dev/)
@@ -8,7 +8,7 @@
 [![MongoDB](https://img.shields.io/badge/MongoDB-Mongoose-4EA94B?style=flat-square&logo=mongodb&logoColor=white)](https://www.mongodb.com/)
 [![pnpm](https://img.shields.io/badge/Package_Manager-pnpm-F69220?style=flat-square&logo=pnpm&logoColor=white)](https://pnpm.io/)
 
-BackChodi is a high-performance, responsive, and secure real-time messaging application built on a client-server architecture. Featuring instant message delivery, dynamic active-user presence trackers, responsive layout toggles, dark-mode capability, and database-backed persistent history, it exemplifies modern production-grade web engineering.
+Vaanix is a high-performance, responsive, and secure real-time messaging and social feed platform built on a client-server architecture. Featuring instant message delivery, multimedia file sharing, visually adjustable cropping, interactive post feeds, active-user presence tracking, dark mode support, and persistent history, it showcases modern production-grade web engineering.
 
 ---
 
@@ -28,7 +28,7 @@ graph TD
 
     subgraph Backend ["Express API + Socket Server (Port 3500)"]
         D[Express Router]:::server
-        E[Shocket Handler]:::server
+        E[Socket Handler]:::server
         F[JWT Middlewares]:::server
     end
 
@@ -41,35 +41,42 @@ graph TD
     D -->|Token Verification| F
     D -->|Mongoose queries| G
     E -->|Presence Updates & DB Save| G
+    E <-->|Real-Time Chat Broker| C
 ```
 
 ---
 
 ## ✨ System Features
 
-* **⚡ Production-Grade Real-Time Operations**: Uses custom WebSockets handler (`shocket`) to achieve sub-millisecond updates for message delivery, typing indicator displays, and user status syncing.
-* **🔐 Advanced Database-Backed Persistence**: Message transactions are stored durably. When a user disconnects, their exact `lastSeen` timestamp is written to the database using Mongoose and broadcasted to other clients instantly.
-* **📱 Responsive Layout Switching**: Full compatibility with phone, tablet, and desktop views. Implements screen toggling on mobile devices (single column list-to-chat navigation with `ArrowLeft` back-nav) to optimize workspace widths.
-* **🗃️ Persistent Chat Ranking**: Keeps track of conversation activity. Using a localized Redux store backed by `localStorage` persistence, users who have recently exchanged messages are automatically sorted to the top of the chat directory.
-* **😀 Emoji Picker React Integration**: Fully customized emojis popover that sizes and flows responsively (`100% width` containers on mobile, `320px` popover on desktop) without clipping viewports.
-* **🌙 Curated HSL Dark Mode**: Integrates premium, Tailwind CSS v4 class transitions to support soft, eye-strain-free dark themes (`dark:bg-[#0b141a]`).
+* **⚡ Production-Grade Real-Time Operations**: Uses WebSockets (`socket.io`) to achieve sub-millisecond updates for message delivery, real-time typing indicators, and user status syncing.
+* **📁 multimedia File Sharing in Chat**: Users can send photos, videos, PDFs, zip archives, and documents directly in chats. Integrates visual download cards and media preview bubbles.
+* **✂️ Client-Side Visual Image Adjuster**: Visual cropper/panner/zoom slider built from scratch with custom HTML5 Canvas. Supports circular mask (for profile pictures) and multiple aspect ratios (1:1, 4:5, 16:9 for post media).
+* **📊 Live Upload Progress Tracking**: Displays a loading indicator with real-time percentage indicators (0% to 100%) when uploading profile pictures, posts, or chat attachments.
+* **📝 Social Feed & Reels**:
+  * **Explore Feed**: Displays community posts with image/video rendering, caption layouts, and comments.
+  * **Reels Feed**: Snap-to-scrolling vertical video player interface with double-click liking and volume controllers.
+  * **Optimistic Updates**: Immediate interface feedback for liking and commenting (with automatic rollback logic in case of request failures).
+* **🗃️ Persistent Chat Ranking**: Uses a localized Redux store backed by `localStorage` to automatically rank active conversations to the top of the chat list.
+* **😀 Emoji Picker React Integration**: Fully customized emojis popover that sizes and flows responsively without clipping viewports.
+* **🌙 Curated HSL Dark Mode**: Integrates premium, Tailwind CSS v4 class transitions to support soft, eye-strain-free dark themes.
 
 ---
 
-## 🛠️ Full Tech-Stack breakdown
+## 🛠️ Full Tech-Stack Breakdown
 
 ### Frontend Core (`client/package.json`)
 * **React 19 & Vite 8**: Modern UI layer leveraging speedy Hot Module Replacement (HMR).
-* **Redux Toolkit & React Redux**: Robust state container with automated serialization adjustments to hold the active socket channel safely.
-* **Tailwind CSS v4 & @tailwindcss/vite**: Direct compilation styling framework.
+* **Redux Toolkit & React Redux**: Global state container with automated serialization adjustments to hold the active socket channel safely.
+* **Tailwind CSS v4 & @tailwindcss/vite**: Direct compilation utility-first styling.
 * **Socket.io-Client**: Reactive WebSocket broker connecting to the server.
 * **Base UI & Shadcn**: Prebuilt accessible components.
-* **Zod & React Hook Form**: Type-safe frontend client validations.
+* **Zod & React Hook Form**: Type-safe client validation schema.
 
 ### Backend Core (`server/package.json`)
-* **Express 5 & Node.js**: Lightweight REST API router.
+* **Express & Node.js**: Lightweight REST API router.
 * **Socket.io**: Scalable real-time server gateway handling connection handshakes and user rooms.
 * **Mongoose & MongoDB**: Object Document Mapper (ODM) structuring `User`, `Message`, and `Conversation` entities.
+* **Cloudinary SDK**: Remote secure cloud storage for files, photos, and videos.
 * **Bcryptjs & JSON Web Tokens**: High-entropy password hashing and stateless authorization via cookie channels.
 * **Zod**: Declarative request payload verification middleware.
 
@@ -81,19 +88,19 @@ graph TD
 📦 Chat App/
  ┣ 📂 client/              # React 19 Frontend
  ┃ ┣ 📂 src/
- ┃ ┃ ┣ 📂 components/      # Reusable UI primitives (buttons, inputs, sidebar wrapper)
- ┃ ┃ ┣ 📂 features/        # Redux Feature slices & thunks (auth, messages, shocket)
- ┃ ┃ ┣ 📂 hooks/           # Customized React Hooks (real-time listeners, network fetches)
- ┃ ┃ ┣ 📂 pages/           # View layouts (Home, Login, Signup)
+ ┃ ┃ ┣ 📂 components/      # Reusable UI primitives (ImageAdjuster, tooltip, scroll area)
+ ┃ ┃ ┣ 📂 features/        # Redux Feature slices, thunks, components, and schemas (auth, posts, messages, socket)
+ ┃ ┃ ┣ 📂 hooks/           # Customized React Hooks (real-time listeners, mobile detectors)
+ ┃ ┃ ┣ 📂 pages/           # View layouts (Home, Feed, Reels, Profile)
  ┃ ┃ ┣ 📜 App.jsx          # Router configurations & main Socket lifecycle manager
  ┃ ┃ ┗ 📜 main.jsx         # App entry point
  ┃ ┗ 📜 package.json
  ┗ 📂 server/              # Node.js + Express Backend
-   ┣ 📂 config/            # Env and Server Configurations
+   ┣ 📂 config/            # Env and Cloudinary configurations
    ┣ 📂 controllers/       # API Controllers handling routing logic
    ┣ 📂 db/                # Mongoose Database Connection managers
    ┣ 📂 middlewares/       # JWT Authenticator, payload validator, and global error handlers
-   ┣ 📂 models/            # Mongoose Schemas (User, Message, Conversation)
+   ┣ 📂 models/            # Mongoose Schemas (User, Message, Conversation, Post)
    ┣ 📂 routes/            # Express route endpoint definitions
    ┣ 📂 schemas/           # Declarative Zod payload schemas
    ┣ 📂 shocket/           # Socket.io connection handshakes and presence events
@@ -104,15 +111,32 @@ graph TD
 
 ## 🛣️ API Endpoints Reference
 
+### User Authentication & Management
 | Route | Method | Access | Description |
 | :--- | :--- | :--- | :--- |
 | `/api/v1/user/signup` | `POST` | Public | Register a new profile |
 | `/api/v1/user/login` | `POST` | Public | Secure credentials authentication (Issues HTTP-Only JWT Cookie) |
 | `/api/v1/user/logout` | `POST` | Public | Clears session cookie |
 | `/api/v1/user/profile` | `GET` | Private | Retrieves session profile details |
+| `/api/v1/user/update-profile` | `PUT` | Private | Updates profile info, status bio, and profile picture URL |
+| `/api/v1/user/change-password` | `POST` | Private | Updates password |
+| `/api/v1/user/forgot-password` | `POST` | Public | Sends password reset email link |
+| `/api/v1/user/reset-password/:token`| `POST`| Public | Completes password reset using token |
 | `/api/v1/user` | `GET` | Private | Retrieves contact directory (excluding self) |
-| `/api/v1/message/send/:receiverId`| `POST` | Private | Sends a text message to a user |
-| `/api/v1/message/:userId` | `GET` | Private | Retrieves message logs with a specific user |
+
+### Messages & Chats
+| Route | Method | Access | Description |
+| :--- | :--- | :--- | :--- |
+| `/api/v1/message/send/:reciverId` | `POST` | Private | Sends a text or media message to a user |
+| `/api/v1/message/:userId` | `GET` | Private | Retrieves paginated message history with a specific user |
+
+### Social Feed & Posts
+| Route | Method | Access | Description |
+| :--- | :--- | :--- | :--- |
+| `/api/v1/post` | `POST` | Private | Uploads a new post (image/video with caption) |
+| `/api/v1/post` | `GET` | Private | Retrieves all posts sorted by date descending |
+| `/api/v1/post/:postId/like` | `POST` | Private | Likes/unlikes a post |
+| `/api/v1/post/:postId/comment` | `POST` | Private | Submits a text comment under a post |
 
 ---
 
@@ -144,20 +168,22 @@ sequenceDiagram
 | `getOnlineUsers` | Custom | Server ➔ Client | `Array<string>` (userIds) | Pushes real-time list of all active connections |
 | `typing` | Custom | Client ➔ Server | `receiverId` | Emits active typing state indicator |
 | `stopTyping` | Custom | Client ➔ Server | `receiverId` | Clears typing indicator |
-| `newMessage` | Custom | Server ➔ Client | `MessageObject` | Transmits text message instantly to receiver |
+| `newMessage` | Custom | Server ➔ Client | `MessageObject` | Transmits text/media message instantly to receiver |
+| `messagesRead` | Custom | Server ➔ Client | `{ readerId }` | Syncs read ticks in real-time |
 | `userLastSeenUpdate` | Custom | Server ➔ Client | `{ userId, lastSeen }` | Broadcasts exact timestamp when a user goes offline |
-| `disconnect` | System | Client ➔ Server | — | Triggers MongoDB database persistence update |
+| `disconnect` | System | Client ➔ Server | — | Triggers database offline/last-seen persistence update |
 
 ---
 
 ## 🚀 Getting Started
 
-Follow these instructions to spin up the local development servers for client and server.
+Follow these instructions to spin up the local development servers for the client and backend API.
 
 ### Prerequisites
 * [Node.js](https://nodejs.org/) (v20 or higher recommended)
 * [pnpm](https://pnpm.io/) package manager
-* MongoDB instance (Local or Atlas cloud database URI)
+* MongoDB instance (Atlas cloud database URI or local server)
+* Cloudinary Account (for image/video uploads)
 
 ### Local Configuration Setup
 
@@ -169,12 +195,15 @@ Follow these instructions to spin up the local development servers for client an
    JWT_SECRET=your_high_entropy_jwt_secret_key
    NODE_ENV=development
    CLIENT_URL=http://localhost:5173
+   CLOUDINARY_CLOUD_NAME=your_cloudinary_cloud_name
+   CLOUDINARY_API_KEY=your_cloudinary_api_key
+   CLOUDINARY_API_SECRET=your_cloudinary_api_secret
    ```
 
 2. **Set up Frontend Configurations**  
    Create a `.env` file in the `client/` directory:
    ```env
-   VITE_API_BASE_URL=http://localhost:3500
+   VITE_API_URL=http://localhost:3500/api/v1
    ```
 
 ### Execution Commands
@@ -197,5 +226,5 @@ pnpm run dev
 
 ---
 <div align="center">
-  <i>Built with ❤️ by Prince sharam & Pair Programmers</i>
+  <i>Built with ❤️ by Prince Sharma & Pair Programmers</i>
 </div>
