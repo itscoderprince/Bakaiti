@@ -82,12 +82,12 @@ const UserSidebar = ({
               <div className="flex h-8 w-8 items-center justify-center rounded-lg shadow-sm overflow-hidden bg-transparent">
                 <img
                   src="/logo.webp"
-                  alt="backChodi Logo"
+                  alt="Vaanix Logo"
                   className="h-full w-full object-contain mix-blend-multiply dark:mix-blend-screen"
                 />
               </div>
-              <span className="font-semibold text-lg tracking-tight">
-                BackChodi
+              <span className="font-extrabold text-xl tracking-wider bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-indigo-500 hover:brightness-110 transition-all select-none">
+                Vaanix
               </span>
             </div>
 

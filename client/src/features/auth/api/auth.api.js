@@ -89,8 +89,10 @@ export const authApi = {
    * @param {Object} profileData - { fullname, username, email, gender, bio, profilePic }
    * @returns {Promise<Object>}
    */
-  updateProfile: async (profileData) => {
-    const response = await axiosInstance.put("/user/update-profile", profileData);
+  updateProfile: async (profileData, onUploadProgress) => {
+    const response = await axiosInstance.put("/user/update-profile", profileData, {
+      onUploadProgress,
+    });
     return response.data;
   }
 };

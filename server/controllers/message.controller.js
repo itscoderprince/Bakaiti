@@ -3,12 +3,13 @@ import ApiResponse from "../utils/ApiResponse.js";
 import Conversation from "../models/conversation.model.js";
 import Message from "../models/message.model.js";
 import { getReceiverSocketId, io } from "../shocket/shocket.js";
+import { uploadToCloudinary } from "../utils/cloudinary.js";
 
 export const sendMessage = asyncHandler(async (req, res, next) => {
   const senderId = req.user._id;
   const receiverId = req.params.reciverId;
 
-  const { message } = req.body;
+  const { message, file, fileType, fileName, fileSize } = req.body;
 
   let conversation = await Conversation.findOne({
     participants: { $all: [senderId, receiverId] },
@@ -31,10 +32,23 @@ export const sendMessage = asyncHandler(async (req, res, next) => {
     }
   }
 
+  let fileUrl = "";
+  if (file) {
+    const resourceType =
+      fileType === "image" || fileType === "video" ? fileType : "raw";
+    // For raw documents/zips, skip image auto-transformations
+    const uploadOptions = resourceType === "raw" ? { transformation: [] } : {};
+    fileUrl = await uploadToCloudinary(file, resourceType, uploadOptions);
+  }
+
   const newMessage = new Message({
     senderId,
     receiverId,
-    message,
+    message: message || "",
+    fileUrl,
+    fileType,
+    fileName,
+    fileSize,
     status,
   });
 
@@ -84,7 +98,7 @@ export const getMessages = asyncHandler(async (req, res, next) => {
   // We fetch limit + 1 messages to determine hasMore.
   const [rawMessages] = await Promise.all([
     Message.find(messageQuery)
-      .select("message senderId receiverId createdAt status") // MIN-4: receiverId included
+      .select("message senderId receiverId createdAt status fileUrl fileType fileName fileSize") // Include file fields
       .sort({ createdAt: -1 })
       .limit(limit + 1)
       .lean(),

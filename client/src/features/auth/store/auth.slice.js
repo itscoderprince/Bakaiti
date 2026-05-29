@@ -17,6 +17,7 @@ const initialState = {
   isLoading: false,
   isCheckingAuth: true,
   error: null,
+  profileUploadProgress: 0,
 };
 
 /**
@@ -60,6 +61,9 @@ const authSlice = createSlice({
       if (contact) {
         contact.unreadCount = 0;
       }
+    },
+    setProfileUploadProgress: (state, action) => {
+      state.profileUploadProgress = action.payload;
     },
   },
   extraReducers: (builder) => {
@@ -143,17 +147,34 @@ const authSlice = createSlice({
       .addCase(updateProfileThunk.pending, (state) => {
         state.isLoading = true;
         state.error = null;
+        state.profileUploadProgress = 0;
       })
       .addCase(updateProfileThunk.fulfilled, (state, action) => {
+        console.log("[auth.slice] updateProfileThunk fulfilled. payload:", action.payload);
         state.isLoading = false;
-        state.user = action.payload || state.user;
+        state.profileUploadProgress = 0;
+        const nextUser = action.payload?.user || action.payload;
+        if (nextUser) {
+          state.user = {
+            ...state.user,
+            ...nextUser,
+          };
+          console.log("[auth.slice] state.user updated to:", state.user);
+        }
       })
       .addCase(updateProfileThunk.rejected, (state, action) => {
         state.isLoading = false;
+        state.profileUploadProgress = 0;
         state.error = action.payload;
       });
   },
 });
 
-export const { logoutUser, updateUserPresence, incrementUnreadCount, resetUnreadCount } = authSlice.actions;
+export const {
+  logoutUser,
+  updateUserPresence,
+  incrementUnreadCount,
+  resetUnreadCount,
+  setProfileUploadProgress,
+} = authSlice.actions;
 export default authSlice.reducer;

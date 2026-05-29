@@ -33,7 +33,7 @@ export const sendEmail = async (options) => {
     });
 
     const mailOptions = {
-      from: `${config.SMTP_FROM_NAME || "BackChodi Chat"} <${config.SMTP_FROM_EMAIL || config.SMTP_USER}>`,
+      from: `${config.SMTP_FROM_NAME || "Vaanix Chat"} <${config.SMTP_FROM_EMAIL || config.SMTP_USER}>`,
       to: options.email,
       subject: options.subject,
       text: options.message,

@@ -12,6 +12,8 @@ import { IconButton } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { getSocket } from "../../features/shocket/store/shocket.slice.js";
 import { getOptimizedMediaUrl } from "../../utils/cloudinary.js";
+import { readAndCompressFile } from "../../utils/imageCompressor.js";
+import toast from "react-hot-toast";
 import {
   Search,
   PhoneCall,
@@ -25,6 +27,8 @@ import {
   Check,
   CheckCheck,
   Palette,
+  FileText,
+  Download,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -167,7 +171,7 @@ const MessageBubble = memo(({ messageObj, myUserId }) => {
     () => getEmojiOnlyCount(messageObj.message),
     [messageObj.message],
   );
-  const isEmojiOnly = emojiCount > 0 && emojiCount <= 3;
+  const isEmojiOnly = emojiCount > 0 && emojiCount <= 3 && !messageObj.fileUrl;
 
   return (
     <div
@@ -214,15 +218,70 @@ const MessageBubble = memo(({ messageObj, myUserId }) => {
           </div>
         ) : (
           <div
-            className={`px-3.5 pt-2 pb-1.5 text-[14.5px] shadow-sm relative min-w-[90px] backdrop-blur-sm transition-all duration-200 ${
+            className={`px-3.5 pt-2 shadow-sm relative min-w-[90px] backdrop-blur-sm transition-all duration-200 ${
+              messageObj.message ? "pb-1.5" : "pb-5.5"
+            } ${
               isMe
                 ? "bg-gradient-to-br from-blue-600 to-blue-700 text-white rounded-2xl rounded-tr-sm shadow-md hover:shadow-lg"
                 : "bg-white/90 dark:bg-zinc-900/90 border border-zinc-200/40 dark:border-zinc-800/30 text-foreground rounded-2xl rounded-tl-sm hover:shadow-md"
             }`}
           >
-            <div className="whitespace-pre-wrap wrap-break-words leading-[20px] pb-3.5 pr-8">
-              {messageObj.message}
-            </div>
+            {/* Render file attachments if present */}
+            {messageObj.fileUrl && (
+              <div className="mb-2 max-w-full">
+                {messageObj.fileType === "image" ? (
+                  <div className="rounded-xl overflow-hidden border border-white/5 shadow-inner">
+                    <img
+                      src={messageObj.fileUrl}
+                      alt="shared image"
+                      className="w-full h-auto object-cover max-h-[250px] cursor-pointer hover:brightness-105 transition-all"
+                      onClick={() => window.open(messageObj.fileUrl, "_blank")}
+                    />
+                  </div>
+                ) : messageObj.fileType === "video" ? (
+                  <div className="rounded-xl overflow-hidden border border-white/5">
+                    <video
+                      src={messageObj.fileUrl}
+                      controls
+                      className="w-full h-auto max-h-[250px]"
+                    />
+                  </div>
+                ) : (
+                  <div
+                    className={`flex items-center gap-2.5 p-3 rounded-xl border ${
+                      isMe
+                        ? "bg-black/35 border-white/10 text-white"
+                        : "bg-muted/50 border-border text-foreground"
+                    }`}
+                  >
+                    <FileText className="h-7 w-7 text-primary shrink-0" />
+                    <div className="min-w-0 text-left">
+                      <p className="text-xs font-semibold truncate max-w-[150px] sm:max-w-[190px]">
+                        {messageObj.fileName || "Document"}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground">
+                        {messageObj.fileSize || "Unknown Size"}
+                      </p>
+                    </div>
+                    <a
+                      href={messageObj.fileUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-1.5 hover:bg-black/10 dark:hover:bg-white/10 rounded-lg transition-colors ml-auto shrink-0"
+                      download
+                    >
+                      <Download className="h-4 w-4" />
+                    </a>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {messageObj.message && (
+              <div className="whitespace-pre-wrap wrap-break-words leading-[20px] pb-3.5 pr-8">
+                {messageObj.message}
+              </div>
+            )}
             <div
               className={`absolute bottom-1 right-2 flex items-center gap-1 text-[9.5px] select-none ${
                 isMe ? "text-white/70" : "text-muted-foreground/60"
@@ -264,7 +323,16 @@ const MessageContainer = ({
 }) => {
   const { user: myUser } = useSelector((state) => state.auth);
   const { onlineUsers, typingUsers } = useSelector((state) => state.shocket);
+  const { messageUploadProgress, sendingMessage } = useSelector((state) => state.messages);
   const [inputText, setInputText] = useState("");
+  
+  // File upload state variables
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [selectedFilePreview, setSelectedFilePreview] = useState("");
+  const [selectedFileType, setSelectedFileType] = useState("");
+  const [selectedFileName, setSelectedFileName] = useState("");
+  const [selectedFileSize, setSelectedFileSize] = useState("");
+  const fileInputRef = useRef(null);
   const isOnline = onlineUsers?.includes(contact?._id);
   const isTyping = !!typingUsers?.[contact?._id];
   const [showSearch, setShowSearch] = useState(false);
@@ -407,11 +475,74 @@ const MessageContainer = ({
     [contact?._id, isLocalTyping],
   );
 
-  // MED-6: same stabilization for the form submit handler
+  // Handle file select action
+  const handleFileSelect = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Enforce 12MB file upload limit
+    const sizeInMB = file.size / (1024 * 1024);
+    if (sizeInMB > 12) {
+      toast.error("File is too large. Please select a file under 12MB.");
+      return;
+    }
+
+    const type = file.type.split("/")[0];
+    setSelectedFileName(file.name);
+    setSelectedFileSize(
+      file.size > 1024 * 1024
+        ? `${(file.size / (1024 * 1024)).toFixed(1)} MB`
+        : `${(file.size / 1024).toFixed(0)} KB`
+    );
+
+    if (type === "image") {
+      setSelectedFileType("image");
+      // Silently compress images client-side before sending in chat
+      try {
+        const { base64 } = await readAndCompressFile(file, {
+          maxWidth: 1080,
+          maxHeight: 1080,
+          quality: 0.82,
+        });
+        setSelectedFile(base64);
+        setSelectedFilePreview(base64);
+      } catch (err) {
+        console.error("Compression error:", err);
+        const reader = new FileReader();
+        reader.onload = () => {
+          setSelectedFile(reader.result);
+          setSelectedFilePreview(reader.result);
+        };
+        reader.readAsDataURL(file);
+      }
+    } else {
+      setSelectedFileType(type === "video" ? "video" : "document");
+      const reader = new FileReader();
+      reader.onload = () => {
+        setSelectedFile(reader.result);
+        setSelectedFilePreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleClearSelectedFile = () => {
+    setSelectedFile(null);
+    setSelectedFilePreview("");
+    setSelectedFileType("");
+    setSelectedFileName("");
+    setSelectedFileSize("");
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  // Form submit handler
   const handleSubmit = useCallback(
     (e) => {
       e.preventDefault();
-      if (!inputText.trim()) return;
+      
+      const hasText = !!inputText.trim();
+      const hasFile = !!selectedFile;
+      if (!hasText && !hasFile) return;
 
       // Stop typing indicator on send
       if (typingTimeoutRef.current) {
@@ -423,10 +554,46 @@ const MessageContainer = ({
         setIsLocalTyping(false);
       }
 
-      onSendMessage(inputText);
+      // Construct a mock sendingMessage for upload progress indicator display
+      const tempMessage = {
+        _id: "temp-" + Date.now(),
+        senderId: myUser?._id,
+        receiverId: contact?._id,
+        message: inputText,
+        fileUrl: selectedFileType === "image" ? selectedFilePreview : null, // render local image preview
+        fileType: selectedFileType,
+        fileName: selectedFileName,
+        fileSize: selectedFileSize,
+        status: "sending",
+        createdAt: new Date().toISOString(),
+      };
+
+      onSendMessage(
+        {
+          message: inputText,
+          file: selectedFile,
+          fileType: selectedFileType,
+          fileName: selectedFileName,
+          fileSize: selectedFileSize,
+        },
+        tempMessage
+      );
+
       setInputText("");
+      handleClearSelectedFile();
     },
-    [inputText, contact?._id, isLocalTyping, onSendMessage],
+    [
+      inputText,
+      selectedFile,
+      selectedFileType,
+      selectedFileName,
+      selectedFileSize,
+      selectedFilePreview,
+      contact?._id,
+      myUser?._id,
+      isLocalTyping,
+      onSendMessage,
+    ],
   );
 
   // Filter messages based on search query
@@ -474,7 +641,7 @@ const MessageContainer = ({
 
           <div className="space-y-2">
             <h3 className="text-2xl font-bold tracking-tight text-foreground">
-              Welcome to BackChodi
+              Welcome to <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-indigo-500 font-extrabold">Vaanix</span>
             </h3>
             <p className="text-sm text-muted-foreground leading-relaxed">
               Select a contact from the sidebar list to start chatting.
@@ -677,6 +844,35 @@ const MessageContainer = ({
                 </div>
               )}
               {renderedMessages}
+
+              {/* Uploading Progress Bubble */}
+              {sendingMessage && sendingMessage.receiverId === contact._id && (
+                <div className="flex w-full justify-end animate-in fade-in duration-200">
+                  <div className="flex flex-col max-w-[85%] md:max-w-[70%] space-y-1 items-end">
+                    <div className="px-3.5 py-3 text-[14.5px] bg-gradient-to-br from-blue-700 to-blue-800 text-white rounded-2xl rounded-tr-sm min-w-[200px] shadow-md border border-white/5">
+                      <div className="flex items-center gap-2 mb-2.5">
+                        <div className="h-4 w-4 border-2 border-cyan-300 border-t-transparent rounded-full animate-spin" />
+                        <span className="text-[12px] text-cyan-200 font-semibold tracking-wide">
+                          Uploading: {messageUploadProgress}%
+                        </span>
+                      </div>
+                      
+                      <div className="w-full bg-black/45 h-1.5 rounded-full overflow-hidden mb-2">
+                        <div
+                          className="bg-cyan-300 h-full transition-all duration-300"
+                          style={{ width: `${messageUploadProgress}%` }}
+                        />
+                      </div>
+                      
+                      {sendingMessage.fileName && (
+                        <p className="text-[11px] text-white/80 truncate max-w-[180px]">
+                          {sendingMessage.fileName}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
             </>
           )}
 
@@ -707,13 +903,61 @@ const MessageContainer = ({
 
       {/* Floating Input Panel Container */}
       <footer className="relative sm:px-3 pb-3 pt-1 bg-transparent shrink-0">
+        
+        {/* Selected attachment preview panel */}
+        {selectedFile && (
+          <div className="mb-2 p-3 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl border border-zinc-200/50 dark:border-zinc-800/40 rounded-2xl max-w-lg mx-auto flex items-center justify-between gap-3 shadow-lg animate-in slide-in-from-bottom-2 duration-200 relative z-10">
+            <div className="flex items-center gap-3 min-w-0">
+              {selectedFileType === "image" ? (
+                <img
+                  src={selectedFilePreview}
+                  alt="Selected preview"
+                  className="h-12 w-12 rounded-xl object-cover border border-white/10"
+                />
+              ) : selectedFileType === "video" ? (
+                <div className="h-12 w-12 rounded-xl bg-zinc-950 flex items-center justify-center border border-white/10">
+                  <Video className="h-5 w-5 text-primary" />
+                </div>
+              ) : (
+                <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20">
+                  <FileText className="h-5 w-5 text-primary" />
+                </div>
+              )}
+              <div className="min-w-0 text-left">
+                <p className="text-xs font-semibold text-foreground truncate max-w-[180px] sm:max-w-[280px]">
+                  {selectedFileName}
+                </p>
+                <p className="text-[10px] text-muted-foreground">{selectedFileSize}</p>
+              </div>
+            </div>
+            
+            <button
+              type="button"
+              onClick={handleClearSelectedFile}
+              className="p-1 rounded-full bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        )}
+
         <form
           onSubmit={handleSubmit}
           className="flex items-center gap-2 md:gap-3 w-full max-w-5xl mx-auto p-1 z-10"
         >
+          {/* Hidden file input */}
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileSelect}
+            className="hidden"
+            accept="image/*,video/*,application/pdf,.doc,.docx,.xls,.xlsx,.txt,.zip"
+          />
+
           <IconButton
             type="button"
             icon={Plus}
+            onClick={() => fileInputRef.current?.click()}
             className="h-11 w-11 shrink-0 text-muted-foreground hover:text-foreground transition-colors duration-200"
             iconClassName="h-6 w-6"
           />
@@ -721,16 +965,16 @@ const MessageContainer = ({
           <Input
             value={inputText}
             onChange={handleInputChange}
-            placeholder="Type a message"
+            placeholder={selectedFile ? "Add a caption..." : "Type a message"}
             className="flex-1 bg-zinc-200/30! dark:bg-zinc-900/70! border-zinc-300/30! dark:border-zinc-800/40 focus-visible:ring-1 focus-visible:ring-primary/50 rounded-full h-11 px-4 transition-all duration-200"
           />
 
           <IconButton
             type="submit"
             icon={SendHorizontal}
-            disabled={!inputText.trim()}
+            disabled={!inputText.trim() && !selectedFile}
             className={`h-11 w-11 shrink-0 rounded-full transition-all duration-200 ${
-              inputText.trim()
+              inputText.trim() || selectedFile
                 ? "bg-primary text-white shadow-md cursor-pointer hover:brightness-110 active:scale-95"
                 : "bg-zinc-200/20 dark:bg-zinc-800/20 text-muted-foreground/30 cursor-not-allowed"
             }`}

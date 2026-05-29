@@ -3,16 +3,16 @@ import { config } from "../config/env.js";
 
 // Check if Cloudinary credentials are fully provided
 const isCloudinaryConfigured = !!(
-  process.env.CLOUDINARY_CLOUD_NAME &&
-  process.env.CLOUDINARY_API_KEY &&
-  process.env.CLOUDINARY_API_SECRET
+  config.CLOUDINARY_CLOUD_NAME &&
+  config.CLOUDINARY_API_KEY &&
+  config.CLOUDINARY_API_SECRET
 );
 
 if (isCloudinaryConfigured) {
   cloudinary.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-    api_key: process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET,
+    cloud_name: config.CLOUDINARY_CLOUD_NAME,
+    api_key: config.CLOUDINARY_API_KEY,
+    api_secret: config.CLOUDINARY_API_SECRET,
   });
   console.log("☁️ Cloudinary SDK configured successfully.");
 } else {

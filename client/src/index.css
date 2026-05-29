@@ -299,3 +299,18 @@ form [data-slot="button"][type="submit"]:not([data-variant="ghost"]):not([data-v
 form [data-slot="button"][type="submit"]:not([data-variant="ghost"]):not([data-variant="outline"]):not([data-variant="link"]):not([data-variant="destructive"]):active {
   transform: translateY(1px) !important;
 }
+
+@keyframes loading {
+  0% {
+    left: -40%;
+    right: 100%;
+  }
+  50% {
+    left: 30%;
+    right: 30%;
+  }
+  100% {
+    left: 100%;
+    right: -40%;
+  }
+}

@@ -24,8 +24,8 @@ export const register = asyncHandler(async (req, res, next) => {
         transformation: [
           { width: 250, height: 250, crop: "fill", gravity: "face" },
           { quality: "auto" },
-          { fetch_format: "auto" }
-        ]
+          { fetch_format: "auto" },
+        ],
       })
     : "";
 
@@ -148,7 +148,11 @@ export const getOtherUsers = asyncHandler(async (req, res, next) => {
   res
     .status(200)
     .json(
-      new ApiResponse(200, otherUsersWithUnread, "Other users retrieved successfully"),
+      new ApiResponse(
+        200,
+        otherUsersWithUnread,
+        "Other users retrieved successfully",
+      ),
     );
 });
 
@@ -184,12 +188,12 @@ export const forgotPassword = asyncHandler(async (req, res, next) => {
   try {
     const mailResult = await sendEmail({
       email: user.email,
-      subject: "Password Reset Request - BackChodi Chat",
+      subject: "Password Reset Request - Vaanix Chat",
       message,
       html: `
         <div style="font-family: sans-serif; padding: 20px; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 8px;">
           <h2 style="color: #10b981; text-align: center;">Password Reset Request</h2>
-          <p>You are receiving this email because you (or someone else) requested a password reset for your BackChodi account.</p>
+          <p>You are receiving this email because you (or someone else) requested a password reset for your Vaanix account.</p>
           <p>Please click the button below to reset your password. This link is valid for 15 minutes.</p>
           <div style="text-align: center; margin: 25px 0;">
             <a href="${resetUrl}" style="display: inline-block; background-color: #10b981; color: #fff; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 15px;">Reset Password</a>
@@ -212,8 +216,8 @@ export const forgotPassword = asyncHandler(async (req, res, next) => {
         },
         mailResult.mocked
           ? "SMTP not configured. Reset link logged to console."
-          : `Email sent to ${user.email} successfully`
-      )
+          : `Email sent to ${user.email} successfully`,
+      ),
     );
   } catch (err) {
     user.resetPasswordToken = undefined;
@@ -248,7 +252,9 @@ export const resetPassword = asyncHandler(async (req, res, next) => {
 
   await user.save();
 
-  res.status(200).json(new ApiResponse(200, null, "Password reset successfully!"));
+  res
+    .status(200)
+    .json(new ApiResponse(200, null, "Password reset successfully!"));
 });
 
 // Change Password
@@ -263,14 +269,18 @@ export const changePassword = asyncHandler(async (req, res, next) => {
 
   // Check if new password is same as old
   if (oldPassword === newPassword) {
-    return next(new AppError(400, "New password cannot be same as old password"));
+    return next(
+      new AppError(400, "New password cannot be same as old password"),
+    );
   }
 
   // Update password (will trigger pre-save hook)
   user.password = newPassword;
   await user.save();
 
-  res.status(200).json(new ApiResponse(200, null, "Password updated successfully!"));
+  res
+    .status(200)
+    .json(new ApiResponse(200, null, "Password updated successfully!"));
 });
 
 // Update Profile
@@ -298,13 +308,18 @@ export const updateProfile = asyncHandler(async (req, res, next) => {
   if (gender) user.gender = gender;
   if (bio !== undefined) user.bio = bio;
   if (profilePic !== undefined) {
-    user.profilePic = await uploadToCloudinary(profilePic, "image", {
-      transformation: [
-        { width: 250, height: 250, crop: "fill", gravity: "face" },
-        { quality: "auto" },
-        { fetch_format: "auto" }
-      ]
-    });
+    try {
+      const uploadResult = await uploadToCloudinary(profilePic, "image", {
+        transformation: [
+          { width: 250, height: 250, crop: "fill", gravity: "face" },
+          { quality: "auto" },
+          { fetch_format: "auto" },
+        ],
+      });
+      user.profilePic = uploadResult;
+    } catch (err) {
+      user.profilePic = profilePic; // fallback
+    }
   }
 
   await user.save();
@@ -312,7 +327,13 @@ export const updateProfile = asyncHandler(async (req, res, next) => {
   // Return the updated user (without password)
   const updatedUser = await User.findById(user._id).select("-password");
 
-  res.status(200).json(
-    new ApiResponse(200, updatedUser, "Profile updated successfully!")
-  );
+  res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        { user: updatedUser },
+        "Profile updated successfully!",
+      ),
+    );
 });

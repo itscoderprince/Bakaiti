@@ -14,7 +14,19 @@ const messageSchema = new mongoose.Schema(
     },
     message: {
       type: String,
-      required: true,
+      default: "",
+    },
+    fileUrl: {
+      type: String,
+    },
+    fileType: {
+      type: String,
+    },
+    fileName: {
+      type: String,
+    },
+    fileSize: {
+      type: String,
     },
     status: {
       type: String,

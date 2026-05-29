@@ -29,9 +29,19 @@ export const getMessagesThunk = createAsyncThunk(
  */
 export const sendMessageThunk = createAsyncThunk(
   "messages/sendMessage",
-  async ({ receiverId, messageData }, { rejectWithValue }) => {
+  async ({ receiverId, messageData }, { dispatch, rejectWithValue }) => {
     try {
-      const data = await messageApi.sendMessage(receiverId, messageData);
+      const data = await messageApi.sendMessage(receiverId, messageData, (progressEvent) => {
+        if (progressEvent.total) {
+          const percentCompleted = Math.round(
+            (progressEvent.loaded * 100) / progressEvent.total
+          );
+          dispatch({
+            type: "messages/setMessageUploadProgress",
+            payload: percentCompleted,
+          });
+        }
+      });
       return data.data; // The newly created message object
     } catch (error) {
       const errorMsg = error.response?.data?.message || error.message || "Failed to send message";

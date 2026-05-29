@@ -34,7 +34,7 @@ const userSchema = new mongoose.Schema(
     },
     bio: {
       type: String,
-      default: "Hey there! I am using BackChodi.",
+      default: "Hey there! I am using Vaanix.",
     },
     lastSeen: {
       type: Date,

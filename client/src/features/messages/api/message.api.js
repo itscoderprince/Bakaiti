@@ -24,9 +24,11 @@ export const messageApi = {
    * @param {Object} messageData - The content of the message (e.g., { text, image }).
    * @returns {Promise<Object>} The server response containing the newly created message.
    */
-  sendMessage: async (receiverId, messageData) => {
+  sendMessage: async (receiverId, messageData, onUploadProgress) => {
     // Note: The backend route expects /send/:reciverId (with typo)
-    const response = await axiosInstance.post(`/message/send/${receiverId}`, messageData);
+    const response = await axiosInstance.post(`/message/send/${receiverId}`, messageData, {
+      onUploadProgress,
+    });
     return response.data;
   }
 };

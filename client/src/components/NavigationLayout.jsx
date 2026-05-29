@@ -45,8 +45,8 @@ function NavigationLayout() {
           <div className="h-9 w-9 rounded-xl bg-gradient-to-tr from-primary to-blue-600 flex items-center justify-center text-white shadow-md shadow-primary/20">
             <MessageSquareCode className="h-5 w-5" />
           </div>
-          <span className="font-extrabold text-lg tracking-tight bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text text-transparent">
-            BackChodi
+          <span className="font-extrabold text-xl tracking-wider bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-indigo-500 hover:brightness-110 transition-all select-none">
+            Vaanix
           </span>
         </div>
 

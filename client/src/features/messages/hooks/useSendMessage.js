@@ -12,11 +12,13 @@ export const useSendMessage = () => {
   const { isSendingMessage, error } = useSelector((state) => state.messages);
 
   const sendMessage = useCallback(
-    async (receiverId, messageData) => {
-      if (!receiverId || !messageData.message?.trim()) return;
+    async (receiverId, messageData, sendingMessage) => {
+      if (!receiverId || (!messageData.message?.trim() && !messageData.file)) return;
 
       try {
-        await dispatch(sendMessageThunk({ receiverId, messageData })).unwrap();
+        await dispatch(
+          sendMessageThunk({ receiverId, messageData, sendingMessage })
+        ).unwrap();
       } catch (err) {
         console.error("Error sending message:", err);
       }

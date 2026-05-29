@@ -1,8 +1,10 @@
 import axiosInstance from "../../../utils/axiosInstance.js";
 
 export const postApi = {
-  createPost: async (postData) => {
-    const response = await axiosInstance.post("/post", postData);
+  createPost: async (postData, onUploadProgress) => {
+    const response = await axiosInstance.post("/post", postData, {
+      onUploadProgress,
+    });
     return response.data;
   },
   getPosts: async () => {

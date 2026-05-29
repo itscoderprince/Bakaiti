@@ -4,6 +4,7 @@ import { signupSchema } from "../schemas/auth.schema.js";
 import { useDispatch, useSelector } from "react-redux";
 import { signupUserThunk } from "../store/auth.thunks.js";
 import { useNavigate } from "react-router-dom";
+import { readAndCompressFile } from "../../../utils/imageCompressor.js";
 
 export const useSignup = () => {
   const navigate = useNavigate();
@@ -19,12 +20,13 @@ export const useSignup = () => {
       let profilePicBase64 = "";
       if (data.profilePic && data.profilePic.length > 0) {
         const file = data.profilePic[0];
-        profilePicBase64 = await new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onloadend = () => resolve(reader.result);
-          reader.onerror = reject;
-          reader.readAsDataURL(file);
+        // Silently compress to 250x250 before sending to server
+        const { base64 } = await readAndCompressFile(file, {
+          maxWidth: 250,
+          maxHeight: 250,
+          quality: 0.88,
         });
+        profilePicBase64 = base64;
       }
 
       const payload = {

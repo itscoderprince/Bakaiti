@@ -26,6 +26,8 @@ const initialState = {
   isSendingMessage: false,
   error: null,
   lastMessageTimes: loadLastMessageTimes(),
+  messageUploadProgress: 0,
+  sendingMessage: null,
 };
 
 const messageSlice = createSlice({
@@ -35,6 +37,17 @@ const messageSlice = createSlice({
     // Reducer for clearing messages when changing chats
     clearMessages: (state) => {
       state.messages = [];
+      state.sendingMessage = null;
+      state.messageUploadProgress = 0;
+    },
+    // Set message upload progress percent
+    setMessageUploadProgress: (state, action) => {
+      state.messageUploadProgress = action.payload;
+    },
+    // Clear sending message placeholder
+    clearSendingMessage: (state) => {
+      state.sendingMessage = null;
+      state.messageUploadProgress = 0;
     },
     // Append incoming socket message — localStorage write handled by store subscriber
     appendMessage: (state, action) => {
@@ -110,12 +123,18 @@ const messageSlice = createSlice({
       })
 
       // sendMessage
-      .addCase(sendMessageThunk.pending, (state) => {
+      .addCase(sendMessageThunk.pending, (state, action) => {
         state.isSendingMessage = true;
         state.error = null;
+        state.messageUploadProgress = 0;
+        if (action.meta.arg?.sendingMessage) {
+          state.sendingMessage = action.meta.arg.sendingMessage;
+        }
       })
       .addCase(sendMessageThunk.fulfilled, (state, action) => {
         state.isSendingMessage = false;
+        state.sendingMessage = null;
+        state.messageUploadProgress = 0;
         // Automatically append the newly sent message to the chat
         if (action.payload) {
           state.messages.push(action.payload);
@@ -129,6 +148,8 @@ const messageSlice = createSlice({
       })
       .addCase(sendMessageThunk.rejected, (state, action) => {
         state.isSendingMessage = false;
+        state.sendingMessage = null;
+        state.messageUploadProgress = 0;
         state.error = action.payload;
       });
   },
@@ -140,5 +161,7 @@ export const {
   updateLastMessageTime,
   markMessagesAsRead,
   markMessagesAsDelivered,
+  setMessageUploadProgress,
+  clearSendingMessage,
 } = messageSlice.actions;
 export default messageSlice.reducer;

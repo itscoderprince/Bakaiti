@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { updateProfileThunk } from "../store/auth.thunks.js";
 import { User, Mail, Camera, Loader2, Save, BadgeHelp, Quote } from "lucide-react";
 import { getOptimizedMediaUrl } from "../../../utils/cloudinary.js";
+import ImageAdjuster from "../../../components/ImageAdjuster.jsx";
 import {
   Sheet,
   SheetContent,
@@ -28,9 +29,11 @@ const updateProfileSchema = z.object({
 
 const EditProfileSheet = ({ open, onOpenChange }) => {
   const dispatch = useDispatch();
-  const { user: currentUser } = useSelector((state) => state.auth);
+  const { user: currentUser, profileUploadProgress } = useSelector((state) => state.auth);
   const [isLoading, setIsLoading] = useState(false);
   const [profilePicBase64, setProfilePicBase64] = useState("");
+  const [adjustSrc, setAdjustSrc] = useState("");
+  const [showAdjuster, setShowAdjuster] = useState(false);
   const fileInputRef = useRef(null);
 
   const {
@@ -47,7 +50,7 @@ const EditProfileSheet = ({ open, onOpenChange }) => {
       username: "",
       email: "",
       gender: "male",
-      bio: "Hey there! I am using BackChodi.",
+      bio: "Hey there! I am using Vaanix.",
     },
   });
 
@@ -61,7 +64,7 @@ const EditProfileSheet = ({ open, onOpenChange }) => {
         username: currentUser.username || "",
         email: currentUser.email || "",
         gender: currentUser.gender || "male",
-        bio: currentUser.bio || "Hey there! I am using BackChodi.",
+        bio: currentUser.bio || "Hey there! I am using Vaanix.",
       });
       setProfilePicBase64(currentUser.profilePic || "");
     }
@@ -71,17 +74,25 @@ const EditProfileSheet = ({ open, onOpenChange }) => {
     const file = e.target.files[0];
     if (!file) return;
 
-    if (file.size > 1 * 1024 * 1024) {
-      toast.error("Image size must be less than 1MB");
-      return;
-    }
-
     const reader = new FileReader();
-    reader.onloadend = () => {
-      setProfilePicBase64(reader.result);
-      toast.success("Profile photo updated locally! Save to upload.");
+    reader.onload = () => {
+      setAdjustSrc(reader.result);
+      setShowAdjuster(true);
+    };
+    reader.onerror = () => {
+      toast.error("Could not read the image file.");
     };
     reader.readAsDataURL(file);
+
+    // Reset input so user can choose same file again
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const handleCropComplete = (croppedBase64) => {
+    setProfilePicBase64(croppedBase64);
+    setShowAdjuster(false);
+    setAdjustSrc("");
+    toast.success("Profile photo ready! Save to apply.");
   };
 
   const triggerFileSelect = () => {
@@ -274,7 +285,7 @@ const EditProfileSheet = ({ open, onOpenChange }) => {
             {isLoading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Saving Changes...
+                Saving Changes... {profileUploadProgress}%
               </>
             ) : (
               <>
@@ -284,6 +295,19 @@ const EditProfileSheet = ({ open, onOpenChange }) => {
             )}
           </Button>
         </form>
+
+        {showAdjuster && (
+          <ImageAdjuster
+            imageSrc={adjustSrc}
+            mode="circle"
+            initialAspectRatio="1:1"
+            onCrop={handleCropComplete}
+            onClose={() => {
+              setShowAdjuster(false);
+              setAdjustSrc("");
+            }}
+          />
+        )}
       </SheetContent>
     </Sheet>
   );

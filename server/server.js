@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
+import compression from "compression";
 import userRoute from "./routes/user.route.js";
 import messageRoute from "./routes/message.route.js";
 import postRoute from "./routes/post.route.js";
@@ -18,9 +19,11 @@ const corsOptions = {
 
 // Middleware
 app.use(cors(corsOptions));
+app.use(compression()); // gzip compression — reduces JSON response sizes by 60-80%
 app.use(express.json({ limit: "15mb" }));
 app.use(express.urlencoded({ limit: "15mb", extended: true }));
 app.use(cookieParser());
+
 
 // Database connection
 Connection();
@@ -29,7 +32,7 @@ const port = config.PORT;
 
 // Routes
 app.get("/", (req, res) => {
-  res.json({ message: "BackChodi API is running successfully!" });
+  res.json({ message: "Vaanix API is running successfully!" });
 });
 app.use("/api/v1/user", userRoute);
 app.use("/api/v1/message", messageRoute);

@@ -25,6 +25,18 @@ const ResetPassword = lazy(() =>
   import("./features/auth/components/ResetPassword.jsx")
 );
 
+// Minimal animated page loader shown while lazy chunks are downloading.
+// Prevents blank/white flashes during code-split navigation.
+const PageLoader = () => (
+  <div className="h-dvh w-screen flex items-center justify-center bg-zinc-950">
+    <div className="flex gap-1.5">
+      <span className="h-2 w-2 rounded-full bg-primary/70 animate-bounce [animation-delay:-0.3s]" />
+      <span className="h-2 w-2 rounded-full bg-primary/70 animate-bounce [animation-delay:-0.15s]" />
+      <span className="h-2 w-2 rounded-full bg-primary/70 animate-bounce" />
+    </div>
+  </div>
+);
+
 const router = createBrowserRouter([
   {
     path: "/",
@@ -34,7 +46,7 @@ const router = createBrowserRouter([
         path: "/",
         element: (
           <ProtectedRoute>
-            <Suspense fallback={null}>
+            <Suspense fallback={<PageLoader />}>
               <NavigationLayout />
             </Suspense>
           </ProtectedRoute>
@@ -43,7 +55,7 @@ const router = createBrowserRouter([
           {
             index: true,
             element: (
-              <Suspense fallback={null}>
+              <Suspense fallback={<PageLoader />}>
                 <Home />
               </Suspense>
             ),
@@ -51,7 +63,7 @@ const router = createBrowserRouter([
           {
             path: "feed",
             element: (
-              <Suspense fallback={null}>
+              <Suspense fallback={<PageLoader />}>
                 <Feed />
               </Suspense>
             ),
@@ -59,7 +71,7 @@ const router = createBrowserRouter([
           {
             path: "reels",
             element: (
-              <Suspense fallback={null}>
+              <Suspense fallback={<PageLoader />}>
                 <Reels />
               </Suspense>
             ),
@@ -67,7 +79,7 @@ const router = createBrowserRouter([
           {
             path: "profile",
             element: (
-              <Suspense fallback={null}>
+              <Suspense fallback={<PageLoader />}>
                 <Profile />
               </Suspense>
             ),
@@ -75,7 +87,7 @@ const router = createBrowserRouter([
           {
             path: "profile/:userId",
             element: (
-              <Suspense fallback={null}>
+              <Suspense fallback={<PageLoader />}>
                 <Profile />
               </Suspense>
             ),
@@ -86,7 +98,7 @@ const router = createBrowserRouter([
         path: "login",
         element: (
           <PublicRoute>
-            <Suspense fallback={null}>
+            <Suspense fallback={<PageLoader />}>
               <Login />
             </Suspense>
           </PublicRoute>
@@ -96,7 +108,7 @@ const router = createBrowserRouter([
         path: "signup",
         element: (
           <PublicRoute>
-            <Suspense fallback={null}>
+            <Suspense fallback={<PageLoader />}>
               <Signup />
             </Suspense>
           </PublicRoute>
@@ -106,7 +118,7 @@ const router = createBrowserRouter([
         path: "forgot-password",
         element: (
           <PublicRoute>
-            <Suspense fallback={null}>
+            <Suspense fallback={<PageLoader />}>
               <ForgotPassword />
             </Suspense>
           </PublicRoute>
@@ -116,7 +128,7 @@ const router = createBrowserRouter([
         path: "reset-password/:token",
         element: (
           <PublicRoute>
-            <Suspense fallback={null}>
+            <Suspense fallback={<PageLoader />}>
               <ResetPassword />
             </Suspense>
           </PublicRoute>

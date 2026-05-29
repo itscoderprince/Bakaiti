@@ -10,11 +10,21 @@ import CreatePostModal from "../../features/posts/components/CreatePostModal.jsx
 const ReelItem = memo(function ReelItem({ post, myUserId, onLike, onCommentSubmit, activeVideoId }) {
   const navigate = useNavigate();
   const videoRef = useRef(null);
+  const commentInputRef = useRef(null);
   const isLiked = post.likes?.includes(myUserId);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const [commentText, setCommentText] = useState("");
+  const [likeAnim, setLikeAnim] = useState(false);
+
+  // Auto focus comment input when comment sheet is opened
+  useEffect(() => {
+    if (showComments && commentInputRef.current) {
+      const t = setTimeout(() => commentInputRef.current?.focus(), 150);
+      return () => clearTimeout(t);
+    }
+  }, [showComments]);
 
   const isActive = activeVideoId === post._id;
 
@@ -119,14 +129,21 @@ const ReelItem = memo(function ReelItem({ post, myUserId, onLike, onCommentSubmi
         {/* Like action */}
         <div className="flex flex-col items-center">
           <button
-            onClick={() => onLike(post._id)}
+            onClick={() => {
+              setLikeAnim(true);
+              setTimeout(() => setLikeAnim(false), 400);
+              onLike(post._id);
+            }}
             className={`h-11 w-11 rounded-full bg-black/40 backdrop-blur-md border border-white/10 flex items-center justify-center transition-all cursor-pointer ${
               isLiked ? "text-red-500 bg-red-500/10 border-red-500/20" : "hover:bg-black/60"
             }`}
           >
-            <Heart className={`h-5 w-5 ${isLiked ? "fill-current" : ""}`} />
+            <Heart
+              className={`h-5 w-5 transition-transform duration-150 ${isLiked ? "fill-current" : ""}`}
+              style={{ transform: likeAnim ? "scale(1.4)" : "scale(1)" }}
+            />
           </button>
-          <span className="text-[10px] font-bold mt-1 text-white/90 drop-shadow-sm">
+          <span className="text-[10px] font-bold mt-1 text-white/90 drop-shadow-sm tabular-nums">
             {post.likes?.length || 0}
           </span>
         </div>
@@ -134,7 +151,13 @@ const ReelItem = memo(function ReelItem({ post, myUserId, onLike, onCommentSubmi
         {/* Comment toggler */}
         <div className="flex flex-col items-center">
           <button
-            onClick={() => setShowComments(true)}
+            onClick={() => {
+              if (!showComments) {
+                setShowComments(true);
+              } else {
+                commentInputRef.current?.focus();
+              }
+            }}
             className="h-11 w-11 rounded-full bg-black/40 backdrop-blur-md border border-white/10 flex items-center justify-center transition-all hover:bg-black/60 cursor-pointer"
           >
             <MessageSquare className="h-5 w-5" />
@@ -201,6 +224,7 @@ const ReelItem = memo(function ReelItem({ post, myUserId, onLike, onCommentSubmi
             className="p-3 border-t border-white/5 flex gap-2"
           >
             <input
+              ref={commentInputRef}
               type="text"
               value={commentText}
               onChange={(e) => setCommentText(e.target.value)}
@@ -272,8 +296,8 @@ export default function Reels() {
   }, [videoPosts.length]);
 
   const handleLike = useCallback((postId) => {
-    dispatch(likePostThunk(postId));
-  }, [dispatch]);
+    dispatch(likePostThunk({ postId, userId: myUser?._id }));
+  }, [dispatch, myUser?._id]);
 
   const handleCommentSubmit = useCallback(({ postId, text }) => {
     dispatch(commentPostThunk({ postId, text }));

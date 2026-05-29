@@ -156,9 +156,19 @@ export const changePasswordThunk = createAsyncThunk(
  */
 export const updateProfileThunk = createAsyncThunk(
   "auth/updateProfile",
-  async (profileData, { rejectWithValue }) => {
+  async (profileData, { dispatch, rejectWithValue }) => {
     try {
-      const data = await authApi.updateProfile(profileData);
+      const data = await authApi.updateProfile(profileData, (progressEvent) => {
+        if (progressEvent.total) {
+          const percentCompleted = Math.round(
+            (progressEvent.loaded * 100) / progressEvent.total
+          );
+          dispatch({
+            type: "auth/setProfileUploadProgress",
+            payload: percentCompleted,
+          });
+        }
+      });
       toast.success(data.message || "Profile updated successfully!");
       return data.data; // Contains updated user
     } catch (error) {

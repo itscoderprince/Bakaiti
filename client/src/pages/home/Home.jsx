@@ -4,7 +4,6 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import UserSidebar from "./UserSidebar";
 import MessageContainer from "./MessageContainer";
 import { useDispatch, useSelector } from "react-redux";
-import { getOtherUsersThunk } from "../../features/auth/store/auth.thunks";
 import { resetUnreadCount } from "../../features/auth/store/auth.slice";
 import { useGetMessages } from "../../features/messages/hooks/useGetMessages";
 import { useSendMessage } from "../../features/messages/hooks/useSendMessage";
@@ -43,10 +42,6 @@ const Home = () => {
   // Listen for real-time messages via socket.io
   useListenMessages(activeContactId);
 
-  useEffect(() => {
-    dispatch(getOtherUsersThunk());
-  }, [dispatch]);
-
   // Reset unread count when switching to a contact
   useEffect(() => {
     if (activeContactId) {
@@ -54,9 +49,9 @@ const Home = () => {
     }
   }, [activeContactId, dispatch]);
 
-  const handleSendMessage = useCallback(async (text) => {
-    if (!text.trim() || !activeContactId) return;
-    await sendMessage(activeContactId, { message: text });
+  const handleSendMessage = useCallback(async (messageData, sendingMessage) => {
+    if (!activeContactId) return;
+    await sendMessage(activeContactId, messageData, sendingMessage);
   }, [activeContactId, sendMessage]);
 
   const activeContact = useMemo(() => {
